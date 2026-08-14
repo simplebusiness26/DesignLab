@@ -5,8 +5,9 @@ Run from the repository root:
     python knowledge/registry/materialize.py
 
 The script validates every transport chunk and every reconstructed knowledge
-file before writing it. It is safe to rerun; generated files are replaced only
-with checksum-verified content from the registries.
+file before writing it under the repository's knowledge/ directory. It is safe
+to rerun; generated files are replaced only with checksum-verified content from
+the registries.
 """
 from __future__ import annotations
 
@@ -16,7 +17,7 @@ import json
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-REPO_ROOT = HERE.parent.parent
+KNOWLEDGE_ROOT = HERE.parent
 MANIFEST = json.loads((HERE / "manifest.json").read_text(encoding="utf-8"))
 
 
@@ -54,7 +55,7 @@ def materialize_registry(reg: dict) -> int:
             raise SystemExit(
                 f"file checksum mismatch before write: {rel_path}: expected {expected}, got {actual}"
             )
-        target = REPO_ROOT / rel_path
+        target = KNOWLEDGE_ROOT / rel_path
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(content, encoding="utf-8")
         if sha256(target.read_bytes()) != expected:
