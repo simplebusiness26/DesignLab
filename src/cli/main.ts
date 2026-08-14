@@ -25,6 +25,7 @@ import {
   runWorkflow,
 } from './commands/misc.js';
 import { formatMergeCheckResult, runMergeCheck } from './commands/merge-check.js';
+import { formatVerifyResult, runVerify } from './commands/verify.js';
 
 export const VERSION = '1.0.0';
 
@@ -254,6 +255,24 @@ export function buildProgram(): Command {
         deleteBranches: options.deleteBranches ?? false,
       });
       output(context, formatCleanResult(result, options.deleteBranches ?? false), result);
+    });
+
+  // -- verify --------------------------------------------------------------
+  program
+    .command('verify')
+    .description('re-run the verification gates for an existing candidate and persist the honest result')
+    .argument('<round>', 'round number or id, e.g. 1 or r001')
+    .argument('<candidate>', 'candidate letter, e.g. A')
+    .option('--repo <url|path>', 'target repository')
+    .action(async (roundRef: string, candidateRef: string, options: { repo?: string }, command: Command) => {
+      const context = await createContext(globalOptions(command));
+      const result = await runVerify(context, {
+        roundRef,
+        candidateRef,
+        repo: options.repo,
+      });
+      output(context, formatVerifyResult(result), result);
+      if (result.status === 'rejected') process.exitCode = 7;
     });
 
   // -- merge-check ---------------------------------------------------------
