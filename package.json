@@ -33,7 +33,7 @@
     "lint:fix": "eslint . --fix",
     "test": "vitest run",
     "test:watch": "vitest",
-    "schemas": "node --experimental-strip-types scripts/emit-schemas.ts",
+    "acceptance": "npm run build && node scripts/acceptance.mjs",
     "verify": "npm run typecheck && npm run lint && npm run test",
     "designlab": "node bin/designlab.js"
   },
