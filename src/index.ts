@@ -39,7 +39,12 @@ export {
 
 // Agents
 export type { AgentRequest, AgentResponse, AgentRole, AgentRunner } from './agents/types.js';
-export { ClaudeCodeRunner } from './agents/claude-code-runner.js';
+export {
+  ClaudeCodeRunner,
+  resolvePermissionMode,
+  runningAsRoot,
+  type PermissionMode,
+} from './agents/claude-code-runner.js';
 export { MockAgentRunner } from './agents/mock-runner.js';
 export { createAgentRunner, LedgeredRunner } from './agents/runner-factory.js';
 

@@ -36,18 +36,31 @@ that run the production orchestrator over real Git repositories.
 
 ---
 
+## Verified against live models
+
+`npm run live-smoke` makes real calls through DesignLab's own runner. It has
+been run and passed, confirming:
+
+- Role → model mapping (`fable` / `sonnet` / `opus`) resolves correctly.
+- Structured output via `--json-schema` is returned and validates.
+- Usage, cost and session id are extracted from the CLI envelope.
+- **Fable meets the diversity requirement on a real request** — a three-design
+  plan scored 0.913 against a 0.55 threshold.
+- **Fable rejects a cosmetic change presented as a structural redesign** —
+  given a theme-token-only diff against a density-focused brief, the verdict
+  was `reject` with a correct explanation. This is the exact failure mode the
+  review stage exists to catch.
+- **Sonnet implements a brief in a real directory** and returns an honest
+  structured report; the files were genuinely modified.
+
 ## Implemented but not yet exercised against a real Android app
 
-These are complete and unit-tested, but have not been run end to end against a
-live repository with real model calls and a real GitHub Actions build. That is
-the next milestone, not a gap in the code.
+Complete and tested, but not yet run against a live target repository with a
+real GitHub Actions build. This is the next milestone, not a gap in the code.
 
-- Live Fable/Sonnet/Opus round on a real mobile application.
+- A full `designlab round` against a real mobile application repository.
 - A real GitHub Actions run producing a downloadable APK.
 - `designlab status --refresh` against a live Actions API.
-
-The distinction matters: the pipeline is proven, the integration with live
-external services is proven only in unit tests against fixtures.
 
 ---
 

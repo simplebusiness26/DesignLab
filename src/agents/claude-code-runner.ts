@@ -31,6 +31,12 @@ import { toJsonSchema } from '../core/json-schema.js';
 import type { AgentRequest, AgentResponse, AgentRole, AgentRunner, AgentUsage } from './types.js';
 import { failedResponse } from './types.js';
 
+/**
+ * Permission modes DesignLab can run agents under. `auto` picks the most
+ * permissive mode the environment actually allows — see `resolvePermissionMode`.
+ */
+export type PermissionMode = 'auto' | 'bypassPermissions' | 'dontAsk' | 'acceptEdits';
+
 export interface ClaudeCodeRunnerOptions {
   /** Model alias or full id per role. */
   models: Record<AgentRole, string>;
@@ -40,12 +46,37 @@ export interface ClaudeCodeRunnerOptions {
   defaultTimeoutMs?: number;
   env?: NodeJS.ProcessEnv;
   /**
-   * Permission mode for unattended runs. `bypassPermissions` is the only mode
-   * that never blocks on a prompt; DesignLab confines the blast radius with
-   * per-agent worktrees and tool policies instead.
+   * Permission mode for unattended runs. DesignLab never has a human present
+   * to answer a prompt, so it needs a non-blocking mode; the blast radius is
+   * confined by per-agent worktrees, tool policies and the protection gate
+   * rather than by interactive approval.
    */
-  permissionMode?: 'bypassPermissions' | 'acceptEdits' | 'dontAsk' | 'default';
+  permissionMode?: PermissionMode;
 }
+
+/**
+ * Resolves `auto` to a mode the environment will actually accept.
+ *
+ * The Claude CLI refuses `bypassPermissions` when running with root
+ * privileges — a common situation in containers and CI images — and exits
+ * before doing any work. `dontAsk` is the closest non-blocking equivalent
+ * that is allowed there.
+ */
+export function resolvePermissionMode(
+  requested: PermissionMode,
+  isRoot: boolean,
+): Exclude<PermissionMode, 'auto'> {
+  if (requested !== 'auto') return requested;
+  return isRoot ? 'dontAsk' : 'bypassPermissions';
+}
+
+/** True when the process runs with root privileges on a POSIX system. */
+export function runningAsRoot(): boolean {
+  return typeof process.getuid === 'function' && process.getuid() === 0;
+}
+
+/** The CLI's refusal message when bypassPermissions is used as root. */
+const ROOT_BYPASS_REFUSAL = /cannot be used with root\/sudo privileges/i;
 
 interface ClaudeJsonEnvelope {
   type?: string;
@@ -67,7 +98,7 @@ export class ClaudeCodeRunner implements AgentRunner {
   private readonly logger: Logger;
   private readonly defaultTimeoutMs: number;
   private readonly env: NodeJS.ProcessEnv;
-  private readonly permissionMode: string;
+  private permissionMode: Exclude<PermissionMode, 'auto'>;
   private availability: boolean | null = null;
 
   constructor(options: ClaudeCodeRunnerOptions) {
@@ -76,7 +107,7 @@ export class ClaudeCodeRunner implements AgentRunner {
     this.logger = (options.logger ?? nullLogger).child({ scope: 'agent:claude-code' });
     this.defaultTimeoutMs = options.defaultTimeoutMs ?? 20 * 60 * 1000;
     this.env = options.env ?? process.env;
-    this.permissionMode = options.permissionMode ?? 'bypassPermissions';
+    this.permissionMode = resolvePermissionMode(options.permissionMode ?? 'auto', runningAsRoot());
   }
 
   modelFor(role: AgentRole): string {
@@ -127,7 +158,34 @@ export class ClaudeCodeRunner implements AgentRunner {
       );
     }
 
-    const durationMs = Date.now() - startedAt;
+    let durationMs = Date.now() - startedAt;
+
+    // The CLI refuses bypassPermissions under root and exits before doing any
+    // work. Detect that specific refusal, downgrade permanently, and retry —
+    // otherwise every agent call in a root container fails identically.
+    if (!result.ok && this.permissionMode === 'bypassPermissions' && ROOT_BYPASS_REFUSAL.test(result.stderr + result.stdout)) {
+      this.permissionMode = 'dontAsk';
+      this.logger.warn('bypassPermissions refused under root; falling back to dontAsk', {
+        operation: request.operation,
+      });
+      try {
+        result = await execCommand(this.bin, this.buildArgs(request, model), {
+          cwd: request.cwd,
+          env: this.env,
+          timeoutMs: request.timeoutMs ?? this.defaultTimeoutMs,
+          input: request.prompt,
+          maxBuffer: 8_000_000,
+        });
+      } catch (error) {
+        return failedResponse(
+          request,
+          model,
+          `Could not execute "${this.bin}": ${error instanceof Error ? error.message : String(error)}`,
+          Date.now() - startedAt,
+        );
+      }
+      durationMs = Date.now() - startedAt;
+    }
 
     if (!result.ok) {
       const detail = result.timedOut

@@ -110,6 +110,12 @@ export const configSchema = z.object({
   agentRunner: z.enum(['claude-code', 'mock']).default('claude-code'),
   /** Path/name of the Claude Code executable. */
   claudeBin: z.string().default('claude'),
+  /**
+   * Permission mode for unattended agent runs. "auto" picks the most
+   * permissive mode the environment allows — the Claude CLI refuses
+   * `bypassPermissions` under root, which is common in containers and CI.
+   */
+  claudePermissionMode: z.enum(['auto', 'bypassPermissions', 'dontAsk', 'acceptEdits']).default('auto'),
   /** Enrich the deterministic manifest with an AI pass. */
   aiManifestEnrichment: z.boolean().default(true),
   logLevel: z.enum(LOG_LEVELS).default('info'),

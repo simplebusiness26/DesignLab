@@ -68,6 +68,12 @@ built-in defaults → designlab.config.json → environment → CLI flags
   "agentRunner": "claude-code",
   "claudeBin": "claude",
 
+  // Permission mode for unattended agent runs. "auto" picks the most
+  // permissive mode the environment allows: the Claude CLI refuses
+  // bypassPermissions under root (common in containers and CI), where
+  // "dontAsk" is the closest non-blocking equivalent.
+  "claudePermissionMode": "auto",
+
   // Enrich the deterministic manifest with an AI analysis pass.
   "aiManifestEnrichment": true,
 

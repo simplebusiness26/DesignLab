@@ -32,6 +32,7 @@ export function createAgentRunner(
       reviewer: config.models.reviewer,
     },
     bin: config.claudeBin,
+    permissionMode: config.claudePermissionMode,
     ...(options.logger ? { logger: options.logger } : {}),
     defaultTimeoutMs: config.limits.leadTimeoutMs,
   });

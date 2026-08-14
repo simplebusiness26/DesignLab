@@ -168,6 +168,9 @@ npm run typecheck   # tsc --noEmit
 npm run lint        # eslint
 npm test            # vitest — includes integration tests over real git repos
 npm run verify      # all three
+
+npm run acceptance  # full CLI flow against a temp fixture app (no tokens)
+npm run live-smoke  # real model calls — costs money, run manually
 ```
 
 The integration tests build real Git repositories in a temp directory, create
