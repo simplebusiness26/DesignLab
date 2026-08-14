@@ -1,0 +1,46 @@
+name: Package Xplorer Messages UX Review
+
+on:
+  push:
+    branches:
+      - designlab-2.0
+    paths:
+      - '.github/workflows/package-xplorer-review.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package-review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout designlab-2.0
+        uses: actions/checkout@v4
+
+      - name: Verify all review files exist
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f prototypes/xplorer-messages/index.html
+          test -f prototypes/xplorer-messages/01-ocho-quiet-campfire/index.html
+          test -f prototypes/xplorer-messages/02-jordan-message-switchboard/index.html
+          test -f prototypes/xplorer-messages/03-loren-flow-through/index.html
+          test -f prototypes/xplorer-messages/04-christian-native-power/index.html
+
+      - name: Build review bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cp -R prototypes/xplorer-messages dist/Xplorer-Messages-UX-Review
+          cd dist
+          zip -r Xplorer-Messages-UX-Review.zip Xplorer-Messages-UX-Review
+
+      - name: Upload review ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: Xplorer-Messages-UX-Review
+          path: dist/Xplorer-Messages-UX-Review.zip
+          if-no-files-found: error
+          retention-days: 30
