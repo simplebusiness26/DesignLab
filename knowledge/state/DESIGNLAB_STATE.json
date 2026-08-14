@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "1.0.0",
+  "knowledgeSystem": "2.0.0",
+  "branch": "designlab-2.0",
+  "personas": {
+    "ux": {
+      "ocho": "1.0.0",
+      "jordan-singer": "1.0.0",
+      "loren-brichter": "1.0.0",
+      "christian-selig": "1.0.0"
+    },
+    "visual": {
+      "localthunk": "1.0.0",
+      "tobias-van-schneider": "1.0.0",
+      "raja-vijayaraman": "1.0.0",
+      "devin-davies": "1.0.0"
+    }
+  },
+  "uxTournament": "foundation-ready",
+  "visualTournament": "foundation-ready",
+  "approvedUx": null,
+  "approvedVisual": null,
+  "implementation": "not-started"
+}

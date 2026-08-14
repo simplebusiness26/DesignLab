@@ -1,0 +1,13 @@
+{
+  "$schema": "https://www.designtokens.org/",
+  "version": "0.1.0-template",
+  "color": {},
+  "typography": {},
+  "space": {},
+  "radius": {},
+  "border": {},
+  "elevation": {},
+  "opacity": {},
+  "motion": {},
+  "breakpoint": {}
+}
