@@ -24,6 +24,7 @@ import {
   unsupportedBuild,
 } from '../builds/build-tracker.js';
 import { planWorkflow, type WorkflowPlan } from '../builds/workflow-generator.js';
+import { extractForeignRegistryPrefixes } from '../builds/lockfile-registry.js';
 import { applyCandidateIdentity, PLUMBING_COMMIT_MARKER } from '../builds/candidate-identity.js';
 import { GitClient } from '../git/git-client.js';
 import { assertPushSafe, WorktreeManager, type WorktreeLease } from '../git/worktree-manager.js';
@@ -36,7 +37,7 @@ import { nullLogger } from './logger.js';
 import type { DesignLabPaths } from './paths.js';
 import type { Store } from './store.js';
 import { didAllRequiredGatesPass, runGates, type GateCommands } from '../testing/gates.js';
-import { writeText } from './fsx.js';
+import { readTextBounded, writeText } from './fsx.js';
 import { join } from 'node:path';
 import type {
   AppManifest,
@@ -160,6 +161,18 @@ export async function runRound(options: RunRoundOptions): Promise<RunRoundResult
 
   // ---- 2. Build the round record ----------------------------------------
 
+  // Lockfiles written inside sandboxed IDEs can pin tarballs to a mirror
+  // that exists nowhere else; detect that here (deterministic file read) so
+  // the generated workflow can repair it in CI without touching the
+  // protected lockfile.
+  const lockText = await readTextBounded(join(options.repoDir, 'package-lock.json'), 16 * 1024 * 1024);
+  const lockfileForeignRegistries = lockText ? extractForeignRegistryPrefixes(lockText) : [];
+  if (lockfileForeignRegistries.length > 0) {
+    logger.warn('lockfile pins tarballs to foreign registry hosts; CI will normalise them', {
+      prefixes: lockfileForeignRegistries.join(' '),
+    });
+  }
+
   const workflow = planWorkflow({
     manifest: options.manifest,
     branchPrefix: options.config.branchPrefix,
@@ -167,6 +180,7 @@ export async function runRound(options: RunRoundOptions): Promise<RunRoundResult
     generate: options.config.build.generateWorkflow,
     workflowPath: options.config.build.workflowPath,
     variant: options.config.build.variant,
+    lockfileForeignRegistries,
   });
 
   /*

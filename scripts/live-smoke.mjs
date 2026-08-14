@@ -25,8 +25,9 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 const { ClaudeCodeRunner } = await import(join(ROOT, 'dist/agents/claude-code-runner.js'));
 const { LEAD_SYSTEM_PROMPT, BUILDER_SYSTEM_PROMPT } = await import(join(ROOT, 'dist/agents/prompts.js'));
-const { designPlanSchema, designReviewSchema, builderReportSchema, diversityJudgementSchema, DIVERSITY_DIMENSIONS } =
-  await import(join(ROOT, 'dist/core/schemas.js'));
+const { designPlanSchema, designReviewSchema, builderReportSchema, diversityJudgementSchema } = await import(
+  join(ROOT, 'dist/core/schemas.js')
+);
 const { scoreDiversity } = await import(join(ROOT, 'dist/design/diversity.js'));
 
 const GREEN = '\u001b[32m';
@@ -228,8 +229,6 @@ async function main() {
       // bottom tabs, card list, medium density — described in completely
       // different vocabulary, plus one genuinely different design. The
       // lexical filter passes this set; the judge must not.
-      const vec = (words) =>
-        Object.fromEntries(DIVERSITY_DIMENSIONS.map((d, i) => [d, `${words[i % words.length]} ${d}`]));
       const colliding = [
         '### aurora',
         'Thesis: A serene vertical journal of trail moments, browsed as stacked cards beneath a persistent five-icon dock.',

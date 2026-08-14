@@ -16,6 +16,7 @@
  */
 
 import type { AppManifest } from '../core/schemas.js';
+import { lockfileNormalisationCommands } from './lockfile-registry.js';
 
 /**
  * A literal `$` for the emitted YAML. Written as an interpolation so the
@@ -54,6 +55,13 @@ export interface WorkflowPlanOptions {
    * not install anywhere and is useless for design evaluation.
    */
   variant?: 'debug' | 'release';
+  /**
+   * Foreign registry prefixes found in package-lock.json (e.g. a Replit
+   * package-firewall mirror). The generated workflow rewrites them to the
+   * public registry in CI, before install — the lockfile itself is PROTECTED
+   * and is never modified in the repository.
+   */
+  lockfileForeignRegistries?: readonly string[];
 }
 
 export function planWorkflow(options: WorkflowPlanOptions): WorkflowPlan {
@@ -103,7 +111,7 @@ export function planWorkflow(options: WorkflowPlanOptions): WorkflowPlan {
     strategy: 'generated',
     variant,
     path: options.workflowPath,
-    content: generator(manifest, options.branchPrefix, variant),
+    content: generator(manifest, options.branchPrefix, variant, options.lockfileForeignRegistries ?? []),
     reason: `Generated a ${variant} workflow for the detected build system "${manifest.androidBuildSystem}".`,
     requirements: generatorRequirements(manifest, variant),
   };
@@ -113,7 +121,12 @@ export function planWorkflow(options: WorkflowPlanOptions): WorkflowPlan {
 // Generators
 // ---------------------------------------------------------------------------
 
-type Generator = (manifest: AppManifest, branchPrefix: string, variant: 'debug' | 'release') => string;
+type Generator = (
+  manifest: AppManifest,
+  branchPrefix: string,
+  variant: 'debug' | 'release',
+  foreignRegistries: readonly string[],
+) => string;
 
 const GENERATORS: Partial<Record<AppManifest['androidBuildSystem'], Generator>> = {
   gradle: generateGradleWorkflow,
@@ -216,7 +229,7 @@ const UPLOAD_STEP = `
           retention-days: 30
 `;
 
-function nodeSetupSteps(manifest: AppManifest): string {
+function nodeSetupSteps(manifest: AppManifest, foreignRegistries: readonly string[] = []): string {
   const cache = manifest.packageManager === 'npm' || manifest.packageManager === 'yarn'
     ? `\n          cache: '${manifest.packageManager}'`
     : '';
@@ -239,12 +252,29 @@ function nodeSetupSteps(manifest: AppManifest): string {
 `
       : '';
 
+  const normalise =
+    foreignRegistries.length > 0
+      ? `
+      - name: Normalise lockfile registry (foreign mirror hosts detected)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The lockfile pins tarballs to a sandbox-internal registry mirror
+          # that does not exist here. Rewrite to the public registry; pinned
+          # versions and integrity hashes are unchanged. CI-only: the
+          # repository's lockfile is protected and never modified.
+${lockfileNormalisationCommands(foreignRegistries)
+  .map((command) => `          ${command}`)
+  .join('\n')}
+`
+      : '';
+
   return `${pnpmSetup}
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: '20'${cache}
-
+${normalise}
       - name: Install dependencies
         run: ${install}
 `;
@@ -261,11 +291,16 @@ const JAVA_SETUP = `
         uses: android-actions/setup-android@v3
 `;
 
-function generateGradleWorkflow(manifest: AppManifest, branchPrefix: string, variant: 'debug' | 'release'): string {
+function generateGradleWorkflow(
+  manifest: AppManifest,
+  branchPrefix: string,
+  variant: 'debug' | 'release',
+  foreignRegistries: readonly string[],
+): string {
   const isJsProject = manifest.packageManager !== 'gradle' && manifest.packageManager !== 'unknown';
   const task = gradleTask(variant);
   return `${workflowHeader(manifest, branchPrefix, 'DesignLab Android Build')}${
-    isJsProject ? nodeSetupSteps(manifest) : ''
+    isJsProject ? nodeSetupSteps(manifest, foreignRegistries) : ''
   }${JAVA_SETUP}
       - name: Grant execute permission to the Gradle wrapper
         run: chmod +x android/gradlew || chmod +x gradlew || true
@@ -289,9 +324,11 @@ function generateExpoPrebuildWorkflow(
   manifest: AppManifest,
   branchPrefix: string,
   variant: 'debug' | 'release',
+  foreignRegistries: readonly string[],
 ): string {
   return `${workflowHeader(manifest, branchPrefix, 'DesignLab Android Build (Expo)')}${nodeSetupSteps(
     manifest,
+    foreignRegistries,
   )}${JAVA_SETUP}
       - name: Generate native Android project
         run: npx expo prebuild --platform android --no-install
@@ -306,10 +343,15 @@ function generateExpoPrebuildWorkflow(
 ${UPLOAD_STEP}`;
 }
 
-function generateEasWorkflow(manifest: AppManifest, branchPrefix: string, _variant: 'debug' | 'release'): string {
+function generateEasWorkflow(
+  manifest: AppManifest,
+  branchPrefix: string,
+  _variant: 'debug' | 'release',
+  foreignRegistries: readonly string[],
+): string {
   // EAS builds are governed by the eas.json profile; the "preview" profile
   // produces an internal-distribution APK that installs on device.
-  return `${workflowHeader(manifest, branchPrefix, 'DesignLab Android Build (EAS)')}${nodeSetupSteps(manifest)}
+  return `${workflowHeader(manifest, branchPrefix, 'DesignLab Android Build (EAS)')}${nodeSetupSteps(manifest, foreignRegistries)}
       - name: Set up EAS
         uses: expo/expo-github-action@v8
         with:
@@ -360,9 +402,11 @@ function generateCapacitorWorkflow(
   manifest: AppManifest,
   branchPrefix: string,
   variant: 'debug' | 'release',
+  foreignRegistries: readonly string[],
 ): string {
   return `${workflowHeader(manifest, branchPrefix, 'DesignLab Android Build (Capacitor)')}${nodeSetupSteps(
     manifest,
+    foreignRegistries,
   )}${JAVA_SETUP}
       - name: Build web assets
         run: ${manifest.commands.build ?? 'npm run build'}
