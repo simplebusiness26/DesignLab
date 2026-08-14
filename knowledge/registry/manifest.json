@@ -1,0 +1,140 @@
+{
+  "schema": "designlab2-knowledge-transport-v1",
+  "version": "persona-pack-v1.0-rc1",
+  "file_count": 73,
+  "registries": [
+    {
+      "name": "foundation",
+      "gzip_sha256": "8a8f3305006b0e335ecdd55cfb8d52ec23050dfaa0ab7f42e1ed329c50be7a1e",
+      "chunks": [
+        {
+          "name": "foundation.part00",
+          "sha256": "f8f129843d25dfb5bf7a0eabf959daf0b49011b92edf62951f25984965a77c85",
+          "bytes": 6000
+        },
+        {
+          "name": "foundation.part01",
+          "sha256": "81b3048a0bbf4c5d35932d5589ee2adde63220617ea063f4feb012d2a16cd717",
+          "bytes": 6000
+        },
+        {
+          "name": "foundation.part02a",
+          "sha256": "55f42357e6637109f5766d3506ae821c05436c6b4dfb3bcad35514e10c800cd7",
+          "bytes": 3000
+        },
+        {
+          "name": "foundation.part02b.00",
+          "sha256": "3e92b1c37a3a61380cb1a19cad82287e59d0dfdaa7474fe3811fbf82c5ff2a52",
+          "bytes": 1500
+        },
+        {
+          "name": "foundation.part02b.01",
+          "sha256": "238bfb2ae00f64a78a9c5c65e3af200d2ce58d0452b3979f47119da6632b23da",
+          "bytes": 1500
+        },
+        {
+          "name": "foundation.part03",
+          "sha256": "4eec8d8b242d6725fe091376126b400551e6c0cb4aa6a80ee4acca60170eba6a",
+          "bytes": 46
+        }
+      ]
+    },
+    {
+      "name": "ux-personas",
+      "gzip_sha256": "2be0991d7619b75eb2a4976888a32b233cbc3e3e96a3f41efafc5b9ba2bb890c",
+      "chunks": [
+        {
+          "name": "ux-personas.part00",
+          "sha256": "2a598160ffbad16ee6895e7ea2fb6cdad10ee00c72127c4aa6a3d2488956616e",
+          "bytes": 6000
+        },
+        {
+          "name": "ux-personas.part01a.00",
+          "sha256": "bea9826968cac1958a01f68745b7d8262fd8717802fbbf28226db335d7b9da3e",
+          "bytes": 1500
+        },
+        {
+          "name": "ux-personas.part01a.01",
+          "sha256": "79c60981611ff14374fef777dba98ce9321b8cb2ec89259cbcb425b361e2e98b",
+          "bytes": 1500
+        },
+        {
+          "name": "ux-personas.part01b.00",
+          "sha256": "66954adfa2f7d827ad8f929e8d8ee782b6d0bd96f82cc2ad0c0e5e524bd8c7fc",
+          "bytes": 1500
+        },
+        {
+          "name": "ux-personas.part01b.01",
+          "sha256": "bddf6b93dbf43ce9d4dae4bfec23b3a30102cb75cecc875e5812a488b486f90a",
+          "bytes": 1500
+        },
+        {
+          "name": "ux-personas.part02",
+          "sha256": "1e2ad35300216f508a1c92541fb7a03f6b9f39cdf4d756d73b6064ebf761d0e2",
+          "bytes": 4000
+        }
+      ]
+    },
+    {
+      "name": "visual-personas",
+      "gzip_sha256": "65af5557694e8b500ad6dbf08b8040ed7b27fae7f1b04016c6e71d231f150155",
+      "chunks": [
+        {
+          "name": "visual-personas.part00a.00",
+          "sha256": "f78502dede4fe235c76cf78015453cfdd895b138ec846c3310f37bd7f1f93f39",
+          "bytes": 1500
+        },
+        {
+          "name": "visual-personas.part00a.01",
+          "sha256": "8765c7dda9b0b0de006d2d15a74867373537b12f07bf82aef1bc296902e1dce5",
+          "bytes": 1500
+        },
+        {
+          "name": "visual-personas.part00b.00",
+          "sha256": "426ec90f3750b0de7b5e3d885312aec5b51c19644f42ecf9554f5b16c1fc4307",
+          "bytes": 1500
+        },
+        {
+          "name": "visual-personas.part00b.01",
+          "sha256": "91fa102916965f06c8f966d37a57c9fd4810fad2b3f0e8bb87899c0f475f5ebf",
+          "bytes": 1500
+        },
+        {
+          "name": "visual-personas.part01a.00",
+          "sha256": "636a7e9603214235ab0a0315ae7dd26cccf681062a484beaa8e2820b0a54df00",
+          "bytes": 1500
+        },
+        {
+          "name": "visual-personas.part01a.01",
+          "sha256": "b7ce76fe6f728770ae4bca5f134925f8d245fed80f0739d7a907128d7bb2356f",
+          "bytes": 1500
+        },
+        {
+          "name": "visual-personas.part01b.00",
+          "sha256": "2b234685897cde07e876b64e6d0ef498971109a341855ba0af23729f65e7e0a7",
+          "bytes": 1500
+        },
+        {
+          "name": "visual-personas.part01b.01",
+          "sha256": "85d0ba739031b6379bad90e3358cefc63eecd05d8ca76744baaeed3b8e0f4304",
+          "bytes": 1500
+        },
+        {
+          "name": "visual-personas.part02a.00",
+          "sha256": "ac39c04ac24da045c0a7fcdc2ea8757f6edba29b364c502aa6f24f4d4bb5444d",
+          "bytes": 1500
+        },
+        {
+          "name": "visual-personas.part02a.01",
+          "sha256": "cdecfa0746aa8913369edcfae3fdd8f824f252d6bab4b19d4fcd33556babd1ab",
+          "bytes": 1500
+        },
+        {
+          "name": "visual-personas.part02b",
+          "sha256": "da97ca70cc98febf59becd7fe15d32f486a6821fb3ec26f7cb531154380a95bb",
+          "bytes": 410
+        }
+      ]
+    }
+  ]
+}
