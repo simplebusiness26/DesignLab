@@ -89,16 +89,14 @@ jobs:
             git push origin HEAD:designlab-2.0
           fi
 
-      - name: Package single-file download
+      - name: Prepare one-file artifact
         run: |
           mkdir -p standalone-download
           cp prototypes/xplorer-messages/Xplorer-Messages-UX-Review-Standalone.html standalone-download/index.html
-          cd standalone-download
-          zip -9 ../Xplorer-Messages-UX-Review-Standalone.zip index.html
 
-      - name: Upload standalone download artifact
+      - name: Upload one-file standalone artifact
         uses: actions/upload-artifact@v4
         with:
           name: Xplorer-Messages-UX-Review-Standalone
-          path: Xplorer-Messages-UX-Review-Standalone.zip
+          path: standalone-download/index.html
           retention-days: 30
