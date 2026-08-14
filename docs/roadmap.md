@@ -33,6 +33,15 @@ that run the production orchestrator over real Git repositories.
 | Winner selection, feedback parsing, lineage | Working |
 | Next-generation planning, with a deterministic fallback | Working |
 | Usage ledger and reporting | Working |
+| Device-installability assessment (`DEVICE_INSTALLABLE` vs `NOT_INSTALLABLE`) | Working; debug variant is the default |
+| Generated workflow committed onto candidate branches (marked, removable) | Working |
+| Opus escalation ladder reachable with default limits | Working; pinned by an integration test |
+| Invariant guards: dependency removal, app identity, permissions | Working, inside the protection gate |
+| Candidate identity overlay for side-by-side installs (opt-in, risk-gated) | Working |
+| `merge-check`: engine-commit peeling, protection re-check, conflict check | Working |
+| Semantic diversity judge (Fable, high-diversity rounds) | Working; lexical filter runs first |
+| Reference-image candidates with origin-tracked lineage | Working (`round --reference <dir>`) |
+| Interrupted rounds marked `aborted` on the next round start | Working |
 
 ---
 
@@ -52,6 +61,11 @@ been run and passed, confirming:
   review stage exists to catch.
 - **Sonnet implements a brief in a real directory** and returns an honest
   structured report; the files were genuinely modified.
+- **The semantic diversity judge catches conceptual collisions** — given two
+  structurally identical designs described in disjoint vocabulary (which the
+  lexical filter scores as diverse) plus one genuinely different design,
+  Fable returned `collision` naming exactly the disguised pair and left the
+  distinct design unflagged.
 
 ## Implemented but not yet exercised against a real Android app
 
@@ -70,11 +84,13 @@ real GitHub Actions build. This is the next milestone, not a gap in the code.
 | --- | --- |
 | Screen discovery is heuristic | No universal definition of a "screen" across frameworks. Every screen records its source path so results are checkable. |
 | Shell-construct commands are not executed | `cd android && ./gradlew …` is reported as `not-configured`. Such commands belong in CI. |
-| Behavioural invariants are not mechanically checked | They are context for agents and reviewers. Path rules carry the enforcement burden. |
-| APKs are unsigned by default | Generated workflows build unsigned release APKs; signing configuration is the operator's. |
+| Most behavioural invariants are not mechanically checked | Dependency removal, app identity and declared permissions ARE checked deterministically; the remainder are context for agents and reviewers. |
+| Release builds are unsigned unless the target configures signing | The default is the debug variant, which is auto-signed and device-installable; `NOT_INSTALLABLE` is reported honestly for unsigned release builds. |
+| Screen capture is an interface, not an implementation | Candidates record `captureStatus: "unsupported"`; review runs on code and diff evidence. A real adapter is purely additive. |
+| Identity overlay disables identity-bound integrations in candidate builds | Firebase/OAuth/Maps/app-links will not work under a suffixed applicationId; the overlay refuses by default when those markers are detected. |
 | Single target repository per project | Monorepos with several apps need one DesignLab project per app. |
 | GitHub Actions only | The `ActionsClient` interface makes another CI provider a new implementation, not a rewrite. |
-| Diversity scoring is lexical | Token overlap, not semantics. It reliably catches restatement, not deep conceptual similarity. |
+| Lexical diversity scoring remains the first filter | It catches restatement cheaply; the Fable semantic judge now catches conceptual collisions on high-diversity rounds. |
 
 ---
 
@@ -102,6 +118,7 @@ would have been the wrong order.
 3. **Second generation.** Choose a winner and confirm generation 2 bases
    itself on the winner's branch with compounding design work.
 
-After that, the highest-value additions are a screenshot capture step (so
-review can judge rendered output rather than diffs), and a read-only web view
-over the existing state directory.
+After that, the highest-value additions are a real screenshot-capture
+adapter behind the existing interface (so review judges rendered output
+rather than diffs), and a read-only web view over the existing state
+directory.

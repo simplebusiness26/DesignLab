@@ -169,6 +169,12 @@ export class GitClient {
     return this.run(['log', '-1', '--format=%s', ref]);
   }
 
+  /** Contents of a file at a specific ref, or null when absent there. */
+  async showFile(ref: string, path: string, cwd?: string): Promise<string | null> {
+    const result = await this.raw(['show', `${ref}:${path}`], cwd ? { cwd } : {});
+    return result.ok ? result.stdout : null;
+  }
+
   // -- fetching and cloning ------------------------------------------------
 
   async clone(repoUrl: string, destination: string, options: { branch?: string; depth?: number } = {}): Promise<void> {

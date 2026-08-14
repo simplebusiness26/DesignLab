@@ -12,7 +12,7 @@
 
 import type { Logger } from '../core/logger.js';
 import { nullLogger } from '../core/logger.js';
-import type { BuildRecord, BuildStatus } from '../core/schemas.js';
+import type { BuildRecord, BuildStatus, BuildVariant, Installability } from '../core/schemas.js';
 
 /**
  * The subset of the GitHub Actions API DesignLab needs. Implemented by the
@@ -82,10 +82,13 @@ export function parseGitHubRepo(repoUrl: string): RepoRef | null {
 export function pendingBuild(options: {
   workflowPath: string | null;
   artifactName: string;
+  variant?: BuildVariant | null;
   notes?: string;
 }): BuildRecord {
   return {
     status: 'BUILD_PENDING',
+    variant: options.variant ?? null,
+    installability: 'UNKNOWN',
     workflowPath: options.workflowPath,
     workflowRunId: null,
     workflowRunUrl: null,
@@ -100,6 +103,8 @@ export function pendingBuild(options: {
 export function unsupportedBuild(reason: string): BuildRecord {
   return {
     status: 'BUILD_UNSUPPORTED',
+    variant: null,
+    installability: 'UNKNOWN',
     workflowPath: null,
     workflowRunId: null,
     workflowRunUrl: null,
@@ -114,6 +119,8 @@ export function unsupportedBuild(reason: string): BuildRecord {
 export function notRequestedBuild(reason: string): BuildRecord {
   return {
     status: 'BUILD_NOT_REQUESTED',
+    variant: null,
+    installability: 'UNKNOWN',
     workflowPath: null,
     workflowRunId: null,
     workflowRunUrl: null,
@@ -132,6 +139,8 @@ export interface RefreshBuildOptions {
   /** The commit DesignLab pushed; runs for other commits are ignored. */
   headSha: string | null;
   current: BuildRecord;
+  /** True when the target's release build is known to be properly signed. */
+  releaseSigned?: boolean;
   logger?: Logger;
 }
 
@@ -160,17 +169,23 @@ export async function refreshBuildStatus(options: RefreshBuildOptions): Promise<
     return { ...options.current, notes: `Could not reach GitHub Actions: ${String(error)}`.slice(0, 500) };
   }
 
-  const relevant = options.headSha
-    ? runs.filter((run) => run.headSha === options.headSha)
-    : runs;
+  // When we know exactly which commit was pushed, ONLY a run for that commit
+  // may drive the state. Falling back to the branch's newest run would let a
+  // stale run — including a stale success — be reported as this commit's
+  // result, which is precisely the lie this module exists to prevent.
+  const run = options.headSha
+    ? runs.find((candidate) => candidate.headSha === options.headSha)
+    : runs[0];
 
-  const run = relevant[0] ?? runs[0];
   if (!run) {
     return {
       ...options.current,
       status: 'BUILD_PENDING',
       checkedAt: new Date().toISOString(),
-      notes: 'No workflow run has appeared for this branch yet.',
+      notes:
+        options.headSha && runs.length > 0
+          ? `No workflow run exists for commit ${options.headSha.slice(0, 8)} yet (runs exist for other commits on this branch).`
+          : 'No workflow run has appeared for this branch yet.',
     };
   }
 
@@ -234,12 +249,14 @@ export async function refreshBuildStatus(options: RefreshBuildOptions): Promise<
     };
   }
 
+  const installability = assessInstallability(options.current.variant, options.releaseSigned ?? false);
   return {
     ...base,
     status: 'BUILD_SUCCESS',
+    installability: installability.verdict,
     artifactName: artifact.name.endsWith('.apk') ? artifact.name : `${artifact.name}.apk`,
     artifactUrl: artifact.archiveDownloadUrl,
-    notes: `Artifact ${artifact.name} (${formatBytes(artifact.sizeInBytes)}).`,
+    notes: `Artifact ${artifact.name} (${formatBytes(artifact.sizeInBytes)}). ${installability.reason}`.trim(),
   };
 }
 
@@ -330,6 +347,38 @@ function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/**
+ * Deterministic device-installability assessment.
+ *
+ * BUILD_SUCCESS says GitHub produced an APK; it does not say a phone will
+ * accept it. Debug builds are signed with the debug keystore automatically
+ * and install anywhere. Unsigned release builds install nowhere — Android
+ * refuses them at install time — so a release variant is installable only
+ * when the operator has attested that real signing is configured.
+ */
+export function assessInstallability(
+  variant: BuildVariant | null,
+  releaseSigned: boolean,
+): { verdict: Installability; reason: string } {
+  if (variant === 'debug') {
+    return {
+      verdict: 'DEVICE_INSTALLABLE',
+      reason: 'Debug variant: signed with the debug keystore, installable on any device.',
+    };
+  }
+  if (variant === 'release') {
+    return releaseSigned
+      ? { verdict: 'DEVICE_INSTALLABLE', reason: 'Release variant with signing configured.' }
+      : {
+          verdict: 'NOT_INSTALLABLE',
+          reason:
+            'Release variant without signing: the APK is unsigned and Android will refuse to install it. ' +
+            'Use the debug variant for device evaluation, or configure release signing.',
+        };
+  }
+  return { verdict: 'UNKNOWN', reason: 'Build variant unknown; installability cannot be assessed.' };
 }
 
 /** Human-readable build status, used by `designlab status`. */

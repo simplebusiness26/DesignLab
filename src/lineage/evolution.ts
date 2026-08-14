@@ -97,6 +97,9 @@ export function chooseWinner(options: ChooseWinnerOptions): ChooseWinnerResult {
     winnerBranch: winnerCandidate.branch,
     feedback: feedback || null,
     candidateSlots: round.candidates.map((candidate) => candidate.slot),
+    referenceSlots: round.candidates
+      .filter((candidate) => candidate.origin === 'REFERENCE_IMAGE')
+      .map((candidate) => candidate.slot),
     chosenAt: new Date().toISOString(),
     createdAt: round.createdAt,
   };

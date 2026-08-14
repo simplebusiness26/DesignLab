@@ -57,6 +57,17 @@ unreachable API is not evidence of failure.
   severity. A user rule must beat a more specific built-in.
 - **Model output is never trusted.** Schema-validate it, then verify its
   claims independently.
+- **Engine commits are marker-driven.** `[designlab-plumbing]` and
+  `[designlab-identity]` commit-subject markers are how `merge-check` proves
+  temporary work is dropped before a merge. Changing the markers breaks that
+  proof; they live in `src/builds/candidate-identity.ts`.
+- **`headSha` is the design content; `pushedSha` is the pushed tip.** Build
+  tracking matches Actions runs against `pushedSha`; merge-check merges
+  `headSha`. Conflating them either breaks build polling or leaks temporary
+  commits into merges.
+- **`limits.builderAttempts` below 3 makes Opus escalation unreachable** —
+  escalation requires a spent retry AND a remaining attempt. A test pins the
+  default.
 
 ## Adding a structured agent operation
 

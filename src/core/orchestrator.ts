@@ -15,6 +15,8 @@ import type { DesignLabConfig } from '../config/config.js';
 import type { AgentRunner } from '../agents/types.js';
 import { buildCandidate } from '../design/builder.js';
 import { planRound } from '../design/planner.js';
+import { interpretReference, type ReferencePack } from '../design/reference.js';
+import { defaultCaptureAdapter, type ScreenCaptureAdapter } from '../design/capture.js';
 import { buildRevisionPrompt, reviewCandidate } from '../design/reviewer.js';
 import {
   notRequestedBuild,
@@ -22,6 +24,7 @@ import {
   unsupportedBuild,
 } from '../builds/build-tracker.js';
 import { planWorkflow, type WorkflowPlan } from '../builds/workflow-generator.js';
+import { applyCandidateIdentity, PLUMBING_COMMIT_MARKER } from '../builds/candidate-identity.js';
 import { GitClient } from '../git/git-client.js';
 import { assertPushSafe, WorktreeManager, type WorktreeLease } from '../git/worktree-manager.js';
 import { ProtectionChecker } from '../protection/checker.js';
@@ -33,6 +36,8 @@ import { nullLogger } from './logger.js';
 import type { DesignLabPaths } from './paths.js';
 import type { Store } from './store.js';
 import { didAllRequiredGatesPass, runGates, type GateCommands } from '../testing/gates.js';
+import { writeText } from './fsx.js';
+import { join } from 'node:path';
 import type {
   AppManifest,
   Candidate,
@@ -64,6 +69,12 @@ export interface RunRoundOptions {
   dryRun: boolean;
   /** Skip pushing branches even when config allows it. */
   noPush?: boolean;
+  /** Commit the generated workflow onto candidate branches even without pushing. */
+  writeWorkflow?: boolean;
+  /** User-supplied reference mockups that become the slot-A candidate. */
+  reference?: ReferencePack | null;
+  /** Screen capture adapter; the default honestly reports "unsupported". */
+  captureAdapter?: ScreenCaptureAdapter;
   logger?: Logger;
 }
 
@@ -93,6 +104,28 @@ export async function runRound(options: RunRoundOptions): Promise<RunRoundResult
     diversity: options.diversityTarget,
   });
 
+  // A reference pack becomes the slot-A candidate before Fable plans its
+  // explorations, so the explorations can be steered — and scored — away
+  // from the position the reference already occupies.
+  let referenceBrief: DesignBrief | null = null;
+  if (options.reference) {
+    referenceBrief = await interpretReference({
+      runner: options.runner,
+      pack: options.reference,
+      manifest: options.manifest,
+      contract: options.contract,
+      repoDir: options.repoDir,
+      round: options.roundNumber,
+      timeoutMs: options.config.limits.leadTimeoutMs,
+      logger,
+    });
+    logger.info('reference candidate interpreted', {
+      slot: 'A',
+      slug: referenceBrief.slug,
+      images: referenceBrief.referenceImages.length,
+    });
+  }
+
   const planResult = await planRound({
     runner: options.runner,
     manifest: options.manifest,
@@ -107,14 +140,20 @@ export async function runRound(options: RunRoundOptions): Promise<RunRoundResult
     logger,
     nextGenerationPlan: options.nextGenerationPlan ?? null,
     lineage: options.lineage,
+    referenceBrief,
+    semanticJudge: options.config.design.semanticDiversityJudge,
   });
 
-  for (const brief of planResult.briefs) {
+  // From here on, the reference candidate is one more brief in the round —
+  // same worktree, same builder, same gates, same review.
+  const allBriefs: DesignBrief[] = [...(referenceBrief ? [referenceBrief] : []), ...planResult.briefs];
+
+  for (const brief of allBriefs) {
     await options.store.writeBrief(brief);
   }
 
   logger.info('design directions planned', {
-    designs: planResult.briefs.map((brief) => `${brief.slot}:${brief.slug}`).join(' '),
+    designs: allBriefs.map((brief) => `${brief.slot}:${brief.slug}${brief.origin === 'REFERENCE_IMAGE' ? ' (reference)' : ''}`).join(' '),
     diversity: planResult.diversity.score,
     attempts: planResult.attempts,
   });
@@ -127,6 +166,7 @@ export async function runRound(options: RunRoundOptions): Promise<RunRoundResult
     reuseExisting: options.config.build.reuseExistingWorkflow,
     generate: options.config.build.generateWorkflow,
     workflowPath: options.config.build.workflowPath,
+    variant: options.config.build.variant,
   });
 
   /*
@@ -137,7 +177,7 @@ export async function runRound(options: RunRoundOptions): Promise<RunRoundResult
    * discard its result. `persist()` therefore writes a snapshot and leaves the
    * working array alone.
    */
-  const candidates: Candidate[] = planResult.briefs.map((brief) =>
+  const candidates: Candidate[] = allBriefs.map((brief) =>
     initialCandidate(brief, options.baseSha, options.config.branchPrefix),
   );
 
@@ -176,7 +216,7 @@ export async function runRound(options: RunRoundOptions): Promise<RunRoundResult
   const leases = new Map<string, WorktreeLease>();
 
   for (const candidate of candidates) {
-    const brief = planResult.briefs.find((entry) => entry.slot === candidate.slot);
+    const brief = allBriefs.find((entry) => entry.slot === candidate.slot);
     if (!brief) continue;
     const lease = await worktrees.create({
       name: worktreeDirName(options.roundNumber, candidate.slot, brief.slug),
@@ -210,7 +250,7 @@ export async function runRound(options: RunRoundOptions): Promise<RunRoundResult
   };
 
   await mapWithConcurrency(candidates, options.config.limits.concurrency, async (candidate) => {
-    const brief = planResult.briefs.find((entry) => entry.slot === candidate.slot);
+    const brief = allBriefs.find((entry) => entry.slot === candidate.slot);
     const lease = leases.get(candidate.slot);
     if (!brief || !lease) {
       candidate.status = 'failed';
@@ -269,12 +309,36 @@ export async function runRound(options: RunRoundOptions): Promise<RunRoundResult
   roundStatus = 'reviewing';
   await persist();
 
+  const captureAdapter = options.captureAdapter ?? defaultCaptureAdapter;
+
   for (const candidate of candidates) {
     if (candidate.status !== 'review-pending') continue;
 
-    const brief = planResult.briefs.find((entry) => entry.slot === candidate.slot);
+    const brief = allBriefs.find((entry) => entry.slot === candidate.slot);
     const lease = leases.get(candidate.slot);
     if (!brief || !lease || !candidate.headSha) continue;
+
+    // Capture renders when an adapter supports the stack; record the honest
+    // outcome either way so "review saw no screenshots" is a stated fact.
+    if (captureAdapter.supports(options.manifest)) {
+      const capture = await captureAdapter
+        .capture({
+          lease,
+          manifest: options.manifest,
+          targetScreens: brief.targetScreens,
+          outputDir: options.paths.candidateLogDir(options.manifest.projectId, options.roundNumber, candidate.slot),
+        })
+        .catch((error: unknown) => ({
+          status: 'failed' as const,
+          images: [],
+          reason: error instanceof Error ? error.message : String(error),
+        }));
+      candidate.captures = capture.images;
+      candidate.captureStatus = capture.status;
+    } else {
+      candidate.captures = [];
+      candidate.captureStatus = 'unsupported';
+    }
 
     const review = await reviewCandidate({
       runner: options.runner,
@@ -283,7 +347,8 @@ export async function runRound(options: RunRoundOptions): Promise<RunRoundResult
       baseSha: options.baseSha,
       headSha: candidate.headSha,
       git,
-      siblingBriefs: planResult.briefs,
+      siblingBriefs: allBriefs,
+      captures: candidate.captures,
       timeoutMs: options.config.limits.leadTimeoutMs,
       maxBudgetUsd: options.config.limits.maxBudgetUsdPerAgent,
       logger,
@@ -353,7 +418,8 @@ export async function runRound(options: RunRoundOptions): Promise<RunRoundResult
       continue;
     }
 
-    const brief = planResult.briefs.find((entry) => entry.slot === candidate.slot);
+    const brief = allBriefs.find((entry) => entry.slot === candidate.slot);
+    const lease = leases.get(candidate.slot);
     const artifactName = brief
       ? apkArtifactName({
           appSlug: options.manifest.appSlug,
@@ -362,6 +428,59 @@ export async function runRound(options: RunRoundOptions): Promise<RunRoundResult
           slug: brief.slug,
         })
       : null;
+
+    // ---- Engine commits: build workflow, then candidate identity ---------
+    //
+    // Both are appended AFTER gates and review, so verification always ran
+    // against pure design content, and both carry a commit-subject marker so
+    // `merge-check` can prove they were dropped before a merge. Order
+    // matters for neither, but they must precede the push: GitHub Actions
+    // only runs workflow files that exist on the pushed ref.
+
+    const shouldCarryWorkflow =
+      (shouldPush || options.writeWorkflow === true) &&
+      workflow.strategy === 'generated' &&
+      workflow.content !== null &&
+      workflow.path !== null &&
+      options.config.build.commitWorkflowToCandidates;
+
+    if (shouldCarryWorkflow && lease && workflow.path && workflow.content) {
+      const worktreeGit = git.withCwd(lease.path);
+      await writeText(join(lease.path, workflow.path), workflow.content);
+      await worktreeGit.stageAll();
+      const workflowCommit = await worktreeGit.commit(
+        `designlab: add build workflow ${PLUMBING_COMMIT_MARKER}\n\n` +
+          'Builds one APK per design branch. Temporary DesignLab plumbing: drop before merging ' +
+          'the winning design; `designlab merge-check` enforces that.',
+      );
+      if (workflowCommit) {
+        logger.info('build workflow committed to candidate branch', {
+          slot: candidate.slot,
+          path: workflow.path,
+        });
+      }
+    }
+
+    if (options.config.build.candidateIdentity === 'suffix' && lease && !options.dryRun) {
+      candidate.identity = await applyCandidateIdentity({
+        git,
+        lease,
+        manifest: options.manifest,
+        slot: candidate.slot,
+        allowRisky: options.config.build.allowRiskyIdentity,
+      });
+      if (candidate.identity.applied) {
+        logger.info('candidate identity applied', {
+          slot: candidate.slot,
+          suffix: candidate.identity.applicationIdSuffix,
+        });
+      } else {
+        logger.warn('candidate identity not applied', {
+          slot: candidate.slot,
+          reason: candidate.identity.reason,
+        });
+      }
+    }
 
     if (!shouldPush) {
       candidate.build = notRequestedBuild(
@@ -378,7 +497,6 @@ export async function runRound(options: RunRoundOptions): Promise<RunRoundResult
 
     try {
       assertPushSafe(candidate.branch, [options.baseBranch, 'main', 'master'], options.config.branchPrefix);
-      const lease = leases.get(candidate.slot);
       const pushResult = await git.push(options.config.build.remote, candidate.branch, {
         ...(lease ? { cwd: lease.path } : {}),
       });
@@ -386,10 +504,15 @@ export async function runRound(options: RunRoundOptions): Promise<RunRoundResult
       if (pushResult.ok) {
         candidate.pushed = true;
         candidate.status = 'pushed';
+        // Record the exact commit that went to the remote: engine commits
+        // sit above headSha, and build tracking must match runs against the
+        // pushed tip, not the design head.
+        candidate.pushedSha = lease ? await git.withCwd(lease.path).headSha() : candidate.headSha;
         if (workflow.strategy !== 'unsupported') {
           candidate.build = pendingBuild({
             workflowPath: workflow.path,
             artifactName: artifactName ?? 'unknown.apk',
+            variant: workflow.variant,
             notes: `Pushed to ${options.config.build.remote}. Waiting for GitHub Actions.`,
           });
         }
@@ -422,7 +545,7 @@ export async function runRound(options: RunRoundOptions): Promise<RunRoundResult
 
   return {
     round,
-    briefs: planResult.briefs,
+    briefs: allBriefs,
     workflow,
     diversityScore: planResult.diversity.score,
     belowDiversityTarget: planResult.belowTarget,
@@ -521,7 +644,11 @@ function initialCandidate(brief: DesignBrief, baseSha: string, branchPrefix: str
     slot: brief.slot,
     slug: brief.slug,
     name: brief.name,
+    origin: brief.origin,
     status: 'planned',
+    identity: null,
+    captures: [],
+    captureStatus: 'skipped',
     branch: designBranchName({
       prefix: branchPrefix,
       round: brief.round,
@@ -531,6 +658,7 @@ function initialCandidate(brief: DesignBrief, baseSha: string, branchPrefix: str
     worktreePath: null,
     baseSha,
     headSha: null,
+    pushedSha: null,
     pushed: false,
     attempts: 0,
     escalations: 0,

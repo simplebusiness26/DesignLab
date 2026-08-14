@@ -25,9 +25,8 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 const { ClaudeCodeRunner } = await import(join(ROOT, 'dist/agents/claude-code-runner.js'));
 const { LEAD_SYSTEM_PROMPT, BUILDER_SYSTEM_PROMPT } = await import(join(ROOT, 'dist/agents/prompts.js'));
-const { designPlanSchema, designReviewSchema, builderReportSchema } = await import(
-  join(ROOT, 'dist/core/schemas.js')
-);
+const { designPlanSchema, designReviewSchema, builderReportSchema, diversityJudgementSchema, DIVERSITY_DIMENSIONS } =
+  await import(join(ROOT, 'dist/core/schemas.js'));
 const { scoreDiversity } = await import(join(ROOT, 'dist/design/diversity.js'));
 
 const GREEN = '\u001b[32m';
@@ -222,9 +221,91 @@ async function main() {
       process.stdout.write(`${DIM}    verdict: ${review.verdict} — ${review.summary}${RESET}\n`);
     }
 
-    // ---- 3. Sonnet: real implementation (--full only) -------------------
+    // ---- 3. Fable: semantic diversity judge ------------------------------
+    heading('3. Lead (fable) — semantic judge catches same structure in different vocabulary');
+    {
+      // Two designs that are STRUCTURALLY identical — single scrolling feed,
+      // bottom tabs, card list, medium density — described in completely
+      // different vocabulary, plus one genuinely different design. The
+      // lexical filter passes this set; the judge must not.
+      const vec = (words) =>
+        Object.fromEntries(DIVERSITY_DIMENSIONS.map((d, i) => [d, `${words[i % words.length]} ${d}`]));
+      const colliding = [
+        '### aurora',
+        'Thesis: A serene vertical journal of trail moments, browsed as stacked cards beneath a persistent five-icon dock.',
+        'Positions:',
+        '  - informationHierarchy: chronological single column, newest first',
+        '  - navigationPresentation: persistent bottom dock, five icons',
+        '  - density: comfortable medium, one card per viewport-third',
+        '  - interactionModel: vertical scroll, tap card to open detail',
+        '',
+        '### ember',
+        'Thesis: A warm, energetic stream of adventures flowing down the screen as rounded tiles above an ever-present tab strip.',
+        'Positions:',
+        '  - informationHierarchy: time-ordered single column, latest at top',
+        '  - navigationPresentation: always-visible tab strip at the bottom, five entries',
+        '  - density: relaxed medium, roughly three tiles per screen',
+        '  - interactionModel: scroll down, press a tile for details',
+        '',
+        '### atlas',
+        'Thesis: The map is the app; entries exist as pins, and a draggable sheet surfaces details over terrain.',
+        'Positions:',
+        '  - informationHierarchy: spatial, position on the map IS the hierarchy',
+        '  - navigationPresentation: no tab bar; floating pill dock over the map',
+        '  - density: sparse, one focused item at a time',
+        '  - interactionModel: pan/zoom the map, drag the sheet',
+      ].join('\n');
+
+      const judgeResponse = await runner.run({
+        role: 'lead',
+        operation: 'judge-diversity',
+        prompt: [
+          'Judge whether these design directions are STRUCTURALLY distinct products, or the same product',
+          'described in different vocabulary. A lexical filter has already passed them; your job is the',
+          'conceptual check it cannot make.',
+          '',
+          colliding,
+          '',
+          'Two designs collide when a user holding both would experience the same information hierarchy, the',
+          'same navigation model, the same density and the same interaction model — regardless of wording,',
+          'palette, typography or mood.',
+          '',
+          'If any pair collides, name the pair and state the shared structural decisions. Return JSON matching the schema.',
+        ].join('\n'),
+        systemPrompt: LEAD_SYSTEM_PROMPT,
+        cwd: workdir,
+        outputSchema: diversityJudgementSchema,
+        toolPolicy: { allowed: [], denied: ['Read', 'Write', 'Edit', 'Glob', 'Grep', 'Bash'] },
+        timeoutMs: 5 * 60 * 1000,
+      });
+
+      check('judge call succeeded', judgeResponse.ok, judgeResponse.error ?? '');
+      check('judge output validated against the schema', judgeResponse.data !== null);
+      if (judgeResponse.usage.costUsd) totalCost += judgeResponse.usage.costUsd;
+
+      if (judgeResponse.data) {
+        const judgement = judgeResponse.data;
+        check(
+          'the judge catches the aurora/ember collision the lexical filter cannot see',
+          judgement.verdict === 'collision' &&
+            judgement.collidingPairs.some(
+              (pair) =>
+                (pair.a.includes('aurora') && pair.b.includes('ember')) ||
+                (pair.a.includes('ember') && pair.b.includes('aurora')),
+            ),
+          JSON.stringify(judgement),
+        );
+        check(
+          'the genuinely different design is not flagged',
+          !judgement.collidingPairs.some((pair) => pair.a.includes('atlas') || pair.b.includes('atlas')),
+        );
+        process.stdout.write(`${DIM}    verdict: ${judgement.verdict} — ${judgement.collidingPairs.map((p) => `${p.a}/${p.b}`).join(', ')}${RESET}\n`);
+      }
+    }
+
+    // ---- 4. Sonnet: real implementation (--full only) -------------------
     if (process.argv.includes('--full')) {
-      heading('3. Builder (sonnet) — implement a brief in a real directory');
+      heading('4. Builder (sonnet) — implement a brief in a real directory');
 
       await mkdir(join(workdir, 'src/theme'), { recursive: true });
       await mkdir(join(workdir, 'src/components'), { recursive: true });

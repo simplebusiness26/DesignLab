@@ -264,11 +264,22 @@ export const diversityVectorSchema = z.object(
 );
 export type DiversityVector = z.infer<typeof diversityVectorSchema>;
 
+/**
+ * Where a design direction came from. Reference-derived candidates carry the
+ * supplied mockups through the whole pipeline and into lineage, so "we tried
+ * your design against four explorations" is a queryable fact, not folklore.
+ */
+export const designOriginSchema = z.enum(['FABLE_EXPLORATION', 'REFERENCE_IMAGE']);
+export type DesignOrigin = z.infer<typeof designOriginSchema>;
+
 export const designBriefSchema = z.object({
   schemaVersion: z.literal(SCHEMA_VERSION).default(SCHEMA_VERSION),
   projectId: nonEmpty,
   round: z.number().int().positive(),
   slot: candidateSlotSchema,
+  origin: designOriginSchema.default('FABLE_EXPLORATION'),
+  /** Absolute paths of the reference images this brief was interpreted from. */
+  referenceImages: z.array(z.string()).default([]),
   /** Short kebab identity used in branch names and APK filenames. */
   slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'expected a kebab-case slug').max(32),
   name: nonEmpty,
@@ -384,8 +395,25 @@ export const buildStatusSchema = z.enum([
 ]);
 export type BuildStatus = z.infer<typeof buildStatusSchema>;
 
+/**
+ * Whether a successfully built artifact can actually be installed on a phone.
+ * BUILD_SUCCESS alone is not that claim: an unsigned release APK builds fine
+ * and installs nowhere. Debug builds are signed with the debug keystore and
+ * install on any device; release builds are installable only when the target
+ * has real signing configured.
+ */
+export const installabilitySchema = z.enum(['DEVICE_INSTALLABLE', 'NOT_INSTALLABLE', 'UNKNOWN']);
+export type Installability = z.infer<typeof installabilitySchema>;
+
+export const buildVariantSchema = z.enum(['debug', 'release']);
+export type BuildVariant = z.infer<typeof buildVariantSchema>;
+
 export const buildRecordSchema = z.object({
   status: buildStatusSchema.default('BUILD_NOT_REQUESTED'),
+  /** Android build variant the workflow was asked to produce. */
+  variant: buildVariantSchema.nullable().default(null),
+  /** Device-installability assessment; meaningful once BUILD_SUCCESS. */
+  installability: installabilitySchema.default('UNKNOWN'),
   /** GitHub Actions workflow file that produces the APK. */
   workflowPath: z.string().nullable().default(null),
   workflowRunId: z.number().int().nullable().default(null),
@@ -431,15 +459,47 @@ export const candidateStatusSchema = z.enum([
 ]);
 export type CandidateStatus = z.infer<typeof candidateStatusSchema>;
 
+/**
+ * Record of a temporary per-candidate app identity (suffixed applicationId
+ * and display name) applied as a marked, removable engine commit so several
+ * candidate APKs can be installed side by side. Never applied silently:
+ * `applied: false` plus a reason is recorded when identity was requested but
+ * judged unsafe for this target.
+ */
+export const candidateIdentitySchema = z.object({
+  applied: z.boolean(),
+  applicationIdSuffix: z.string().nullable().default(null),
+  displayName: z.string().nullable().default(null),
+  /** Commit that carries the overlay; must be dropped before merge. */
+  commit: z.string().nullable().default(null),
+  reason: z.string().default(''),
+});
+export type CandidateIdentity = z.infer<typeof candidateIdentitySchema>;
+
+export const captureStatusSchema = z.enum(['captured', 'unsupported', 'failed', 'skipped']);
+export type CaptureStatus = z.infer<typeof captureStatusSchema>;
+
 export const candidateSchema = z.object({
   slot: candidateSlotSchema,
   slug: nonEmpty,
   name: nonEmpty,
+  origin: designOriginSchema.default('FABLE_EXPLORATION'),
   status: candidateStatusSchema.default('planned'),
+  identity: candidateIdentitySchema.nullable().default(null),
+  /** Screenshot paths captured for review; empty until an adapter exists. */
+  captures: z.array(z.string()).default([]),
+  captureStatus: captureStatusSchema.default('skipped'),
   branch: nonEmpty,
   worktreePath: z.string().nullable().default(null),
   baseSha: sha,
   headSha: z.string().nullable().default(null),
+  /**
+   * Tip actually pushed to the remote. Differs from `headSha` (the design
+   * content) when marked engine commits — build workflow, identity overlay —
+   * were appended before the push. Build tracking must match runs against
+   * THIS commit; merge-check uses `headSha` as the merge content.
+   */
+  pushedSha: z.string().nullable().default(null),
   pushed: z.boolean().default(false),
   attempts: z.number().int().nonnegative().default(0),
   escalations: z.number().int().nonnegative().default(0),
@@ -502,6 +562,8 @@ export const lineageEntrySchema = z.object({
   winnerBranch: z.string().nullable().default(null),
   feedback: z.string().nullable().default(null),
   candidateSlots: z.array(candidateSlotSchema).default([]),
+  /** Slots whose design originated from user-supplied reference images. */
+  referenceSlots: z.array(candidateSlotSchema).default([]),
   chosenAt: isoDate.nullable().default(null),
   createdAt: isoDate,
 });
@@ -594,6 +656,44 @@ export const escalationVerdictSchema = z.object({
   riskNotes: z.string().default(''),
 });
 export type EscalationVerdict = z.infer<typeof escalationVerdictSchema>;
+
+/**
+ * Structured output of the reference-image interpretation pass: the lead
+ * agent views user-supplied mockups and translates what is *visible* into a
+ * design brief. `uncertainties` is load-bearing — an image shows presentation,
+ * not behaviour, and anything the image cannot establish must be named rather
+ * than invented. The existing app remains the source of truth for behaviour.
+ */
+export const referenceInterpretationSchema = z.object({
+  slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(32),
+  name: nonEmpty,
+  thesis: nonEmpty,
+  rationale: z.string().default(''),
+  diversityVector: diversityVectorSchema,
+  directives: z.array(nonEmpty).min(3).max(40),
+  targetScreens: z.array(z.string()).default([]),
+  antiPatterns: z.array(z.string()).default([]),
+  successCriteria: z.array(nonEmpty).min(1).max(20),
+  /** What the images do NOT establish; behaviour must come from the app. */
+  uncertainties: z.array(z.string()).max(20).default([]),
+});
+export type ReferenceInterpretation = z.infer<typeof referenceInterpretationSchema>;
+
+/**
+ * Verdict of the semantic diversity judge: a conceptual check that runs after
+ * the cheap lexical filter has passed, catching designs that use different
+ * words for the same structural decisions.
+ */
+export const diversityJudgementSchema = z.object({
+  verdict: z.enum(['distinct', 'collision']),
+  collidingPairs: z
+    .array(z.object({ a: nonEmpty, b: nonEmpty, reason: nonEmpty }))
+    .max(10)
+    .default([]),
+  /** Concrete replanning guidance when the verdict is "collision". */
+  guidance: z.string().default(''),
+});
+export type DiversityJudgement = z.infer<typeof diversityJudgementSchema>;
 
 /** Structured report a Sonnet builder returns after implementing a brief. */
 export const builderReportSchema = z.object({

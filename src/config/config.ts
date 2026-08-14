@@ -33,8 +33,15 @@ export const modelRoleSchema = z.object({
 export type ModelRoles = z.infer<typeof modelRoleSchema>;
 
 export const limitsSchema = z.object({
-  /** Implementation attempts per candidate before it is marked failed. */
-  builderAttempts: z.number().int().min(1).max(6).default(2),
+  /**
+   * Implementation attempts per candidate before it is marked failed.
+   * The default is 3, and that number is structural, not arbitrary: the
+   * escalation ladder is attempt 1 → plain retry with the gate output →
+   * escalated attempt with the reviewer's diagnosis. Escalation only fires
+   * when a retry has already been spent AND another attempt remains, so any
+   * value below 3 makes the Opus reviewer unreachable.
+   */
+  builderAttempts: z.number().int().min(1).max(6).default(3),
   /** Opus escalations allowed per candidate. */
   escalations: z.number().int().min(0).max(3).default(1),
   /** Candidates implemented concurrently. */
@@ -85,12 +92,53 @@ export const buildConfigSchema = z.object({
   reuseExistingWorkflow: z.boolean().default(true),
   /** Workflow path DesignLab writes when it generates one. */
   workflowPath: z.string().default('.github/workflows/designlab-android.yml'),
+  /**
+   * Commit the generated workflow onto each candidate branch (as a marked,
+   * removable engine commit) before pushing. GitHub Actions only runs
+   * workflow files that exist on the pushed ref, so without this a target
+   * with no Android CI of its own would never build a single APK.
+   */
+  commitWorkflowToCandidates: z.boolean().default(true),
+  /**
+   * Android build variant. `debug` is the default deliberately: debug APKs
+   * are signed with the debug keystore automatically and install on any
+   * device, which is what a design evaluation needs. `release` produces an
+   * UNSIGNED, non-installable APK unless the target repository has real
+   * signing configured — opt in only when it does.
+   */
+  variant: z.enum(['debug', 'release']).default('debug'),
+  /** True when the target's release build is known to be properly signed. */
+  releaseSigned: z.boolean().default(false),
+  /**
+   * Temporary per-candidate app identity, for installing several candidate
+   * APKs side by side on one phone. `off` by default: changing an
+   * applicationId breaks Firebase config, OAuth redirects, restricted Maps
+   * keys and app-link verification, so it must be an informed choice. When
+   * `suffix`, the overlay is applied as a marked, removable commit and is
+   * refused outright when known-risky integrations are detected (unless
+   * allowRiskyIdentity is set).
+   */
+  candidateIdentity: z.enum(['off', 'suffix']).default('off'),
+  /** Apply the identity overlay even when risk markers are detected. */
+  allowRiskyIdentity: z.boolean().default(false),
   /** Push successful design branches to the target remote. */
   pushBranches: z.boolean().default(true),
   /** Git remote used for pushes. */
   remote: z.string().default('origin'),
 });
 export type BuildConfig = z.infer<typeof buildConfigSchema>;
+
+export const designConfigSchema = z.object({
+  /**
+   * After the cheap lexical diversity filter passes, ask the lead model for
+   * one conceptual judgement of the design set (high-diversity rounds only).
+   * The lexical score catches restatement; the judge catches different words
+   * describing the same structural decisions. One small, tool-free call per
+   * round; disable to save it.
+   */
+  semanticDiversityJudge: z.boolean().default(true),
+});
+export type DesignConfig = z.infer<typeof designConfigSchema>;
 
 export const configSchema = z.object({
   $schema: z.string().optional(),
@@ -106,6 +154,7 @@ export const configSchema = z.object({
   limits: limitsSchema.default({}),
   protection: protectionConfigSchema.default({}),
   build: buildConfigSchema.default({}),
+  design: designConfigSchema.default({}),
   /** Agent backend. "mock" runs the full pipeline with no model calls. */
   agentRunner: z.enum(['claude-code', 'mock']).default('claude-code'),
   /** Path/name of the Claude Code executable. */

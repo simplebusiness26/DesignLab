@@ -24,6 +24,7 @@ import {
   runProtect,
   runWorkflow,
 } from './commands/misc.js';
+import { formatMergeCheckResult, runMergeCheck } from './commands/merge-check.js';
 
 export const VERSION = '1.0.0';
 
@@ -122,7 +123,11 @@ export function buildProgram(): Command {
         .default('high'),
     )
     .option('--no-push', 'do not push successful design branches')
-    .option('--write-workflow', 'write the generated Actions workflow into each candidate worktree', false)
+    .option('--write-workflow', 'commit the generated Actions workflow onto candidate branches even without pushing', false)
+    .option(
+      '--reference <path>',
+      'directory (or single image) of UI mockups; becomes an additional slot-A candidate',
+    )
     .action(
       async (
         options: {
@@ -132,6 +137,7 @@ export function buildProgram(): Command {
           diversity?: 'low' | 'medium' | 'high';
           push?: boolean;
           writeWorkflow?: boolean;
+          reference?: string;
         },
         command: Command,
       ) => {
@@ -143,6 +149,7 @@ export function buildProgram(): Command {
           diversity: options.diversity,
           noPush: options.push === false,
           writeWorkflow: options.writeWorkflow ?? false,
+          reference: options.reference,
         });
         output(context, formatRoundResult(result, context.dryRun), result);
       },
@@ -248,6 +255,33 @@ export function buildProgram(): Command {
       });
       output(context, formatCleanResult(result, options.deleteBranches ?? false), result);
     });
+
+  // -- merge-check ---------------------------------------------------------
+  program
+    .command('merge-check')
+    .description('verify a candidate branch is ready for a human merge (never merges)')
+    .argument('<round>', 'round number or id, e.g. 1 or r001')
+    .argument('<candidate>', 'candidate letter, e.g. C')
+    .option('--repo <url|path>', 'target repository')
+    .option('--base <branch>', 'merge target branch (defaults to the round base branch)')
+    .action(
+      async (
+        roundRef: string,
+        candidateRef: string,
+        options: { repo?: string; base?: string },
+        command: Command,
+      ) => {
+        const context = await createContext(globalOptions(command));
+        const result = await runMergeCheck(context, {
+          roundRef,
+          candidateRef,
+          repo: options.repo,
+          base: options.base,
+        });
+        output(context, formatMergeCheckResult(result), result);
+        if (!result.readiness.ready) process.exitCode = 8;
+      },
+    );
 
   // -- doctor --------------------------------------------------------------
   program

@@ -14,6 +14,7 @@
  * Usage:  node scripts/acceptance.mjs [--keep]
  */
 
+import { Buffer } from 'node:buffer';
 import { spawn } from 'node:child_process';
 import { mkdtemp, mkdir, writeFile, rm, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -413,13 +414,20 @@ async function main() {
       check('workflow planning succeeded', code === 0 && data !== null);
       check('a workflow was generated', data?.plan?.strategy === 'generated');
       check('workflow triggers on design branches', (data?.plan?.content ?? '').includes("'design/**'"));
-      check('workflow builds a release APK', (data?.plan?.content ?? '').includes('assembleRelease'));
+      check(
+        'workflow builds a DEBUG APK by default — the variant that installs on a device',
+        (data?.plan?.content ?? '').includes('assembleDebug'),
+      );
+      check('workflow records its variant', data?.plan?.variant === 'debug');
       check('workflow uploads an artifact', (data?.plan?.content ?? '').includes('actions/upload-artifact@v4'));
       check(
         'artifact naming derives from the app slug',
         (data?.plan?.content ?? '').includes('trailmark-'),
       );
-      check('signing requirement is stated', (data?.plan?.requirements ?? []).some((r) => r.includes('signing')));
+      check(
+        'installability of the debug variant is stated',
+        (data?.plan?.requirements ?? []).some((r) => r.includes('debug keystore')),
+      );
     }
 
     // ---- 8. STATUS -------------------------------------------------------
@@ -526,11 +534,72 @@ async function main() {
       );
     }
 
+    // ---- 10b. REFERENCE ROUND -------------------------------------------
+    heading('ROUND 3 — reference-image candidate alongside explorations');
+    {
+      const referenceDir = await mkdtemp(join(tmpdir(), 'designlab-acceptance-ref-'));
+      const TINY_PNG = Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+        'base64',
+      );
+      for (const name of ['home.png', 'map.png']) {
+        await writeFile(join(referenceDir, name), TINY_PNG);
+      }
+
+      const { data, code, stderr } = await runJson([
+        ...dry,
+        'round',
+        '--repo',
+        app.dir,
+        '--designs',
+        '2',
+        '--reference',
+        referenceDir,
+      ]);
+      check('reference round succeeded', code === 0 && data !== null, stderr.slice(-300));
+
+      const round3 = data?.round;
+      check('reference adds one candidate on top of the explorations', round3?.candidates?.length === 3);
+      const referenceCandidate = round3?.candidates?.[0];
+      check('slot A is the reference candidate', referenceCandidate?.slot === 'A');
+      check('reference origin recorded', referenceCandidate?.origin === 'REFERENCE_IMAGE');
+      check(
+        'exploration origins recorded',
+        (round3?.candidates ?? []).slice(1).every((c) => c.origin === 'FABLE_EXPLORATION'),
+      );
+      const referenceBrief = (data?.briefs ?? []).find((b) => b.slot === 'A');
+      check('reference brief carries the image paths', (referenceBrief?.referenceImages?.length ?? 0) === 2);
+      check(
+        'reference candidate went through the same gates',
+        referenceCandidate?.status === 'ready',
+        referenceCandidate?.status,
+      );
+
+      await rm(referenceDir, { recursive: true, force: true }).catch(() => {});
+    }
+
+    // ---- 10c. MERGE-CHECK ------------------------------------------------
+    heading('MERGE-CHECK — winner is verifiably mergeable, and merging stays human');
+    {
+      const { data, code, stderr } = await runJson([...base, 'merge-check', '1', 'C', '--repo', app.dir]);
+      check('merge-check ran', code === 0 && data !== null, stderr.slice(-300));
+      check('winner branch is MERGE_READY', data?.readiness?.ready === true, JSON.stringify(data?.readiness?.blockers));
+      check('conflict check ran clean', data?.readiness?.conflicts?.clean === true);
+      check(
+        'merge instructions are for a human, not executed',
+        (data?.readiness?.instructions ?? []).some((line) => line.includes('git merge')),
+      );
+
+      // Proof it did NOT merge: the base branch is still the initial commit.
+      const headAfter = await git(app.dir, ['rev-parse', 'HEAD']);
+      check('base branch untouched by merge-check', headAfter === app.sha);
+    }
+
     // ---- 11. PERSISTENCE -------------------------------------------------
     heading('PERSISTENCE — everything survives a restart');
     {
       const { data } = await runJson([...base, 'status', '--repo', app.dir]);
-      check('both rounds persisted', (data?.rounds ?? []).length === 2);
+      check('all three rounds persisted', (data?.rounds ?? []).length === 3);
       check('winner persisted on round 1', data?.rounds?.find((r) => r.round === 1)?.winner === 'C');
 
       const projectId = data?.projectId;

@@ -6,12 +6,10 @@
  * previous round), and hands off to the orchestrator.
  */
 
-import { writeText } from '../../core/fsx.js';
-import { join } from 'node:path';
-
 import { DesignLabError } from '../../core/errors.js';
 import { MAX_DESIGNS_PER_ROUND, shortSha } from '../../core/ids.js';
 import { runRound, type RunRoundResult } from '../../core/orchestrator.js';
+import { loadReferencePack } from '../../design/reference.js';
 import { describeBuildStatus } from '../../builds/build-tracker.js';
 import { assertRunnerAvailable } from '../../agents/runner-factory.js';
 import type { CliContext } from '../context.js';
@@ -26,16 +24,26 @@ export interface RoundOptions {
   noPush?: boolean;
   /** Write the generated Actions workflow into the target's worktrees. */
   writeWorkflow?: boolean;
+  /** Directory or image of UI mockups to run as an extra slot-A candidate. */
+  reference?: string | undefined;
 }
 
 export async function runRoundCommand(context: CliContext, options: RoundOptions): Promise<RunRoundResult> {
   const logger = context.logger.child({ scope: 'round' });
 
   const designCount = options.designs ?? 4;
-  if (!Number.isInteger(designCount) || designCount < 1 || designCount > MAX_DESIGNS_PER_ROUND) {
-    throw new DesignLabError('CONFIG_INVALID', `--designs must be between 1 and ${MAX_DESIGNS_PER_ROUND}`, {
-      details: { designs: options.designs },
-    });
+  const referenceSlots = options.reference ? 1 : 0;
+  if (
+    !Number.isInteger(designCount) ||
+    designCount < 1 ||
+    designCount + referenceSlots > MAX_DESIGNS_PER_ROUND
+  ) {
+    throw new DesignLabError(
+      'CONFIG_INVALID',
+      `--designs must be between 1 and ${MAX_DESIGNS_PER_ROUND - referenceSlots}` +
+        (referenceSlots ? ' when a reference candidate occupies a slot' : ''),
+      { details: { designs: options.designs, reference: Boolean(options.reference) } },
+    );
   }
 
   const target = await resolveTarget({ context, repo: options.repo, branch: options.base, refresh: true });
@@ -52,6 +60,26 @@ export async function runRoundCommand(context: CliContext, options: RoundOptions
   }
 
   const roundNumber = await context.store.nextRoundNumber(target.projectId);
+
+  // An interrupted previous run leaves a round stuck in a non-terminal state.
+  // Starting fresh is always safe (worktrees are recreated, state rewrites),
+  // but the stuck round must not masquerade as live work forever.
+  const staleRound =
+    roundNumber > 1 ? await context.store.readRound(target.projectId, roundNumber - 1) : null;
+  if (staleRound && !['complete', 'chosen', 'aborted'].includes(staleRound.status)) {
+    logger.warn('previous round was interrupted; marking it aborted', {
+      round: staleRound.round,
+      status: staleRound.status,
+    });
+    await context.store.writeRound({ ...staleRound, status: 'aborted' });
+  }
+
+  const reference = options.reference
+    ? await loadReferencePack(options.reference, context.paths.cwd)
+    : null;
+  if (reference) {
+    logger.info('reference pack loaded', { images: reference.images.length, dir: reference.dir });
+  }
 
   // Evolution: when the previous round has a winner, this round starts from
   // the winner's branch, so design work compounds across generations.
@@ -118,19 +146,10 @@ export async function runRoundCommand(context: CliContext, options: RoundOptions
     nextGenerationPlan,
     dryRun: context.dryRun,
     ...(options.noPush !== undefined ? { noPush: options.noPush } : {}),
+    writeWorkflow: options.writeWorkflow ?? false,
+    reference,
     logger,
   });
-
-  // The generated workflow is written into each candidate worktree only when
-  // explicitly requested: it is a change to the target repository, and the
-  // operator should opt into that rather than discover it in a diff.
-  if (options.writeWorkflow && result.workflow.strategy === 'generated' && result.workflow.content) {
-    for (const candidate of result.round.candidates) {
-      if (!candidate.worktreePath || !result.workflow.path) continue;
-      await writeText(join(candidate.worktreePath, result.workflow.path), result.workflow.content);
-    }
-    logger.info('build workflow written into candidate worktrees', { path: result.workflow.path });
-  }
 
   return result;
 }

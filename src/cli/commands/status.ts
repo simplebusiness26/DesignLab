@@ -77,8 +77,11 @@ export async function runStatus(context: CliContext, options: StatusOptions): Pr
             client,
             repo: repoRef,
             branch: candidate.branch,
-            headSha: candidate.headSha,
+            // Engine commits (workflow, identity) sit above the design head;
+            // the run GitHub reports is for the pushed tip.
+            headSha: candidate.pushedSha ?? candidate.headSha,
             current: candidate.build,
+            releaseSigned: context.config.build.releaseSigned,
             logger: context.logger,
           });
           if (updated.status !== candidate.build.status || updated.artifactUrl !== candidate.build.artifactUrl) {
@@ -175,6 +178,9 @@ export function formatStatus(result: StatusResult): string {
       lines.push(`        ${candidate.branch}`);
       if (candidate.build.artifactUrl) {
         lines.push(`        artifact: ${candidate.build.artifactName}`);
+      }
+      if (candidate.build.status === 'BUILD_SUCCESS') {
+        lines.push(`        install:  ${candidate.build.installability}`);
       }
       if (candidate.build.workflowRunUrl) {
         lines.push(`        run:      ${candidate.build.workflowRunUrl}`);

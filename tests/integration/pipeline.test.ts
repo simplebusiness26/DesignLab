@@ -564,9 +564,23 @@ describe('workflow planning against the inspected target', () => {
     });
 
     expect(plan.strategy).toBe('generated');
-    expect(plan.content).toContain('assembleRelease');
+    // Debug is the default variant: debug APKs are signed with the debug
+    // keystore and actually install on a device; unsigned release APKs don't.
+    expect(plan.variant).toBe('debug');
+    expect(plan.content).toContain('assembleDebug');
     expect(plan.content).toContain("'design/**'");
     expect(plan.content).toContain('fieldnotes-');
-    expect(plan.requirements.some((item) => item.includes('signing'))).toBe(true);
+    expect(plan.requirements.some((item) => item.includes('debug keystore'))).toBe(true);
+
+    const release = planWorkflow({
+      manifest: harness.manifest,
+      branchPrefix: 'design',
+      reuseExisting: true,
+      generate: true,
+      workflowPath: '.github/workflows/designlab-android.yml',
+      variant: 'release',
+    });
+    expect(release.content).toContain('assembleRelease');
+    expect(release.requirements.some((item) => item.includes('UNSIGNED'))).toBe(true);
   });
 });

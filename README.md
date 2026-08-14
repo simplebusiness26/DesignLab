@@ -110,6 +110,7 @@ designlab round --designs 4
 | `designlab round` | Plans, implements, verifies and reviews one generation of designs |
 | `designlab status` | Manifest, contract, rounds, candidates, gate results, build state, usage |
 | `designlab choose <round> <slot>` | Records the winner and plans the next generation |
+| `designlab merge-check <round> <slot>` | Verifies the winner is mergeable by a human; never merges |
 | `designlab protect` | Shows the contract, classifies paths, or checks a branch against it |
 | `designlab workflow` | Shows or writes the Actions workflow that builds an APK per branch |
 | `designlab clean` | Removes local worktrees (never remote branches) |
@@ -154,6 +155,8 @@ More: [`docs/architecture.md`](docs/architecture.md).
 | [`docs/design-rounds.md`](docs/design-rounds.md) | Diversity, briefs, gates, review |
 | [`docs/apk-pipeline.md`](docs/apk-pipeline.md) | Android build workflows and build state |
 | [`docs/evolution.md`](docs/evolution.md) | Winners, feedback and generations |
+| [`docs/merge-and-identity.md`](docs/merge-and-identity.md) | Side-by-side install identities and merge-readiness |
+| [`docs/reference-candidates.md`](docs/reference-candidates.md) | User-supplied mockups as first-class candidates |
 | [`docs/usage-optimisation.md`](docs/usage-optimisation.md) | Where the tokens go and how they are bounded |
 | [`docs/security.md`](docs/security.md) | Trust boundaries and blast radius |
 | [`docs/troubleshooting.md`](docs/troubleshooting.md) | Common failures and fixes |

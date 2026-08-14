@@ -23,19 +23,42 @@ designlab workflow           # show the plan and the workflow
 designlab workflow --write   # write it into the working clone
 ```
 
-The workflow is **not** written by default. It is a change to your repository
-and you should opt into it rather than find it in a diff.
+**Delivery to candidate branches.** GitHub Actions only runs workflow files
+that exist on the pushed ref. When DesignLab generates a workflow, it is
+therefore committed onto each candidate branch — as a marked
+`[designlab-plumbing]` commit at the tip, applied after all gates — right
+before the push (`build.commitWorkflowToCandidates`, default on). The base
+branch is never touched, and `designlab merge-check` verifies the plumbing
+commit is dropped before a merge.
+
+## Build variant and installability
+
+The default variant is **debug**, deliberately: debug APKs are signed with
+the debug keystore automatically and install on any device, which is what a
+design evaluation needs. An unsigned release APK builds green and installs
+nowhere.
+
+Alongside `BUILD_SUCCESS`, every build records an installability verdict:
+
+| Verdict | Meaning |
+| --- | --- |
+| `DEVICE_INSTALLABLE` | Debug variant, or release with `build.releaseSigned: true` |
+| `NOT_INSTALLABLE` | Release variant without signing — Android will refuse the APK |
+| `UNKNOWN` | Variant not recorded |
+
+Set `build.variant: "release"` only when the target has real signing
+configured, and say so with `build.releaseSigned: true`.
 
 ---
 
 ## Supported build systems
 
-| Detected | Generated workflow |
+| Detected | Generated workflow (debug variant by default) |
 | --- | --- |
-| `gradle` | JDK 17 + Android SDK → `./gradlew assembleRelease` |
+| `gradle` | JDK 17 + Android SDK → `./gradlew assembleDebug` |
 | `expo-prebuild` | Node + `expo prebuild --platform android` → Gradle |
-| `eas-build` | `eas build --platform android --profile preview --wait` |
-| `flutter` | `flutter-action` → `flutter build apk --release` |
+| `eas-build` | `eas build --platform android --profile preview --wait` (profile governs the variant) |
+| `flutter` | `flutter-action` → `flutter build apk --debug` |
 | `capacitor` | Web build → `cap sync android` → Gradle |
 | `none` / unknown | `unsupported`, with an explanation |
 
@@ -87,8 +110,10 @@ consequences worth stating explicitly:
 - An unreachable GitHub API leaves the state **untouched** with a note. An
   outage is not evidence of failure.
 
-Runs for a different commit are ignored, so a stale success can never be
-reported as this commit's success.
+Runs are matched against the exact commit DesignLab pushed. When no run
+exists for that commit, the state stays `BUILD_PENDING` with an explanation —
+a stale run for another commit on the branch, even a successful one, is
+never reported as this commit's result.
 
 ---
 
@@ -107,13 +132,16 @@ is involved.
 
 ## What you must set up
 
-Generated workflows build an **unsigned** release APK. For installable builds,
-add your signing configuration:
+With the default **debug** variant, nothing beyond enabling GitHub Actions:
+debug APKs are signed with the debug keystore and install on any device with
+"install unknown apps" allowed.
+
+For **release** builds:
 
 - **Gradle / Expo prebuild** — add the keystore and its secrets to the
-  repository and reference them in the workflow.
+  repository, reference them in the workflow, and set
+  `build.releaseSigned: true` so installability is reported correctly.
 - **EAS** — add an `EXPO_TOKEN` repository secret.
-- **All** — GitHub Actions must be enabled on the target repository.
 
 `designlab workflow` lists the requirements for your detected stack.
 

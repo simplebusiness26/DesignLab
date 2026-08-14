@@ -59,9 +59,12 @@ export { inspectRepository, buildSnapshot, renderAnalysis, type InspectResult } 
 export { buildContract, BUILTIN_RULES } from './protection/contract.js';
 export { ProtectionChecker, formatProtectionReport } from './protection/checker.js';
 export { compileGlob, matchesGlob } from './protection/glob.js';
+export { runInvariantChecks } from './protection/invariants.js';
 
 // Design
 export { planRound, type PlanRoundResult } from './design/planner.js';
+export { loadReferencePack, interpretReference, type ReferencePack } from './design/reference.js';
+export { NullCaptureAdapter, defaultCaptureAdapter, type ScreenCaptureAdapter } from './design/capture.js';
 export { scoreDiversity, describeDiversityShortfall, type DiversityScore } from './design/diversity.js';
 export { buildCandidate } from './design/builder.js';
 export { reviewCandidate, overallScore } from './design/reviewer.js';
@@ -72,10 +75,20 @@ export { runGates, didAllRequiredGatesPass, formatGateResults, DEFAULT_GATES } f
 // Builds
 export { planWorkflow, type WorkflowPlan } from './builds/workflow-generator.js';
 export {
+  applyCandidateIdentity,
+  assessIdentityRisk,
+  planCandidateIdentity,
+  isEngineCommitSubject,
+  IDENTITY_COMMIT_MARKER,
+  PLUMBING_COMMIT_MARKER,
+} from './builds/candidate-identity.js';
+export { checkMergeReadiness, type MergeReadinessResult } from './builds/merge-readiness.js';
+export {
   GitHubActionsClient,
   parseGitHubRepo,
   refreshBuildStatus,
   describeBuildStatus,
+  assessInstallability,
   type ActionsClient,
 } from './builds/build-tracker.js';
 

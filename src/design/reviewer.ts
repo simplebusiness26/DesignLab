@@ -29,6 +29,8 @@ export interface ReviewCandidateOptions {
   git: GitClient;
   /** Briefs of the sibling candidates, used to judge distinctiveness. */
   siblingBriefs: readonly DesignBrief[];
+  /** Captured screenshots of the running implementation, when they exist. */
+  captures?: readonly string[];
   timeoutMs?: number;
   maxBudgetUsd?: number | null;
   logger?: Logger;
@@ -85,6 +87,24 @@ export async function reviewCandidate(options: ReviewCandidateOptions): Promise<
       diff.slice(0, 40_000) || '(no diff available)',
       '```',
       '',
+      ...(options.captures && options.captures.length > 0
+        ? [
+            '## Rendered screenshots of this implementation — view each with the Read tool',
+            '',
+            ...options.captures.map((image, index) => `${index + 1}. ${image}`),
+            '',
+          ]
+        : []),
+      ...(options.brief.origin === 'REFERENCE_IMAGE' && options.brief.referenceImages.length > 0
+        ? [
+            '## The reference mockups this design was derived from — view each with the Read tool',
+            '',
+            ...options.brief.referenceImages.map((image, index) => `${index + 1}. ${image}`),
+            '',
+            'Judge fidelity to these mockups as part of brief adherence: the human asked for THIS design.',
+            '',
+          ]
+        : []),
       '## What to assess',
       '',
       'Read the changed files in the working directory to see the full implementation. Then score, honestly:',

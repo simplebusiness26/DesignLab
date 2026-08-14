@@ -15,10 +15,12 @@ import { nullLogger } from '../core/logger.js';
 import { slotForIndex, slugify, type CandidateSlot } from '../core/ids.js';
 import {
   designPlanSchema,
+  diversityJudgementSchema,
   DIVERSITY_DIMENSIONS,
   type AppManifest,
   type DesignBrief,
   type DesignPlan,
+  type DiversityJudgement,
   type FunctionalityContract,
   type Lineage,
   type NextGenerationPlan,
@@ -40,6 +42,14 @@ export interface PlanRoundOptions {
   /** Evolution context: the plan produced by `designlab choose`. */
   nextGenerationPlan?: NextGenerationPlan | null;
   lineage?: Lineage | null;
+  /**
+   * A reference-derived brief already occupying slot A. Fable's exploratory
+   * designs fill the following slots and must be structurally distinct from
+   * the reference as well as from each other.
+   */
+  referenceBrief?: DesignBrief | null;
+  /** Run the conceptual diversity judgement after the lexical filter. */
+  semanticJudge?: boolean;
 }
 
 export interface PlanRoundResult {
@@ -92,9 +102,27 @@ export async function planRound(options: PlanRoundOptions): Promise<PlanRoundRes
     }
 
     const plan = normalisePlan(response.data, options.designCount);
-    const diversity = scoreDiversity(
-      plan.designs.map((design) => ({ id: design.slug, diversityVector: design.diversityVector, thesis: design.thesis })),
-    );
+
+    // The reference design (when present) participates in scoring: Fable's
+    // explorations must be distinct from it too, or the round wastes a slot
+    // re-deriving the supplied mockups.
+    const scorable = [
+      ...(options.referenceBrief
+        ? [
+            {
+              id: `reference:${options.referenceBrief.slug}`,
+              diversityVector: options.referenceBrief.diversityVector,
+              thesis: options.referenceBrief.thesis,
+            },
+          ]
+        : []),
+      ...plan.designs.map((design) => ({
+        id: design.slug,
+        diversityVector: design.diversityVector,
+        thesis: design.thesis,
+      })),
+    ];
+    const diversity = scoreDiversity(scorable);
 
     logger.info('design plan scored', {
       attempt: attempts,
@@ -106,6 +134,29 @@ export async function planRound(options: PlanRoundOptions): Promise<PlanRoundRes
     if (!best || diversity.score > best.diversity.score) best = { plan, diversity };
 
     if (diversity.score >= options.minDiversityScore) {
+      // Lexical distance passed — cheap filter done. For high-diversity
+      // rounds, one conceptual judgement now catches the failure the lexical
+      // score cannot: different vocabulary describing the same structural
+      // decisions. This is where design intelligence earns its cost.
+      if (options.semanticJudge && options.diversityTarget === 'high') {
+        const judgement = await judgeDiversitySemantically(options, plan, logger);
+        if (judgement && judgement.verdict === 'collision' && attempts < maxAttempts) {
+          feedback = formatJudgementFeedback(judgement);
+          logger.warn('semantic diversity judge found a conceptual collision, re-planning', {
+            attempt: attempts,
+            pairs: judgement.collidingPairs.map((pair) => `${pair.a}/${pair.b}`).join(' '),
+          });
+          continue;
+        }
+        if (judgement && judgement.verdict === 'collision') {
+          // Retries exhausted: proceed, but the shortfall is recorded.
+          logger.warn('semantic collision remains after retries; proceeding with the best set', {
+            pairs: judgement.collidingPairs.map((pair) => `${pair.a}/${pair.b}`).join(' '),
+          });
+          return { plan, diversity, attempts, belowTarget: true, briefs: toBriefs(plan, options) };
+        }
+      }
+
       return {
         plan,
         diversity,
@@ -168,8 +219,10 @@ function toBriefs(plan: DesignPlan, options: PlanRoundOptions): DesignBrief[] {
   const parentPlan = options.nextGenerationPlan;
   const generatedAt = new Date().toISOString();
 
+  const slotOffset = options.referenceBrief ? 1 : 0;
+
   return plan.designs.map((design, index) => {
-    const slot: CandidateSlot = slotForIndex(index);
+    const slot: CandidateSlot = slotForIndex(index + slotOffset);
     const direction = parentPlan?.directions.find((entry) => entry.slug === design.slug);
     const relation = direction?.relation ?? design.parentRelation ?? '';
 
@@ -178,6 +231,8 @@ function toBriefs(plan: DesignPlan, options: PlanRoundOptions): DesignBrief[] {
       projectId: options.manifest.projectId,
       round: options.round,
       slot,
+      origin: 'FABLE_EXPLORATION' as const,
+      referenceImages: [],
       slug: design.slug,
       name: design.name,
       thesis: design.thesis,
@@ -194,6 +249,88 @@ function toBriefs(plan: DesignPlan, options: PlanRoundOptions): DesignBrief[] {
       generatedAt,
     };
   });
+}
+
+// ---------------------------------------------------------------------------
+// Semantic diversity judgement
+// ---------------------------------------------------------------------------
+
+/**
+ * One small, tool-free lead-model call judging whether the set is genuinely
+ * distinct as *product structure*, not vocabulary. Failure to obtain a
+ * judgement is non-fatal: the lexical filter already passed, and a judge
+ * outage must not sink a round.
+ */
+async function judgeDiversitySemantically(
+  options: PlanRoundOptions,
+  plan: DesignPlan,
+  logger: Logger,
+): Promise<DiversityJudgement | null> {
+  const designs = [
+    ...(options.referenceBrief
+      ? [{ slug: `reference:${options.referenceBrief.slug}`, thesis: options.referenceBrief.thesis, vector: options.referenceBrief.diversityVector, directives: options.referenceBrief.directives }]
+      : []),
+    ...plan.designs.map((design) => ({
+      slug: design.slug,
+      thesis: design.thesis,
+      vector: design.diversityVector,
+      directives: design.directives,
+    })),
+  ];
+
+  const sections = designs.map((design) => {
+    const vector = Object.entries(design.vector)
+      .map(([dimension, value]) => `  - ${dimension}: ${value}`)
+      .join('\n');
+    return [`### ${design.slug}`, `Thesis: ${design.thesis}`, 'Positions:', vector, 'Key directives:', ...design.directives.slice(0, 6).map((d) => `  - ${d}`)].join('\n');
+  });
+
+  const response: AgentResponse<DiversityJudgement> = await options.runner.run({
+    role: 'lead',
+    operation: 'judge-diversity',
+    prompt: [
+      'Judge whether these design directions are STRUCTURALLY distinct products, or the same product',
+      'described in different vocabulary. A lexical filter has already passed them; your job is the',
+      'conceptual check it cannot make.',
+      '',
+      ...sections,
+      '',
+      'Two designs collide when a user holding both would experience the same information hierarchy, the',
+      'same navigation model, the same density and the same interaction model — regardless of wording,',
+      'palette, typography or mood. Adjectives ("premium", "bold", "clean") are not differences.',
+      '',
+      'If any pair collides, name the pair, state the shared structural decisions in concrete terms, and',
+      'give replanning guidance that says what structural position the replacement should take instead.',
+      '',
+      'Judge from the material above only. Return JSON matching the schema.',
+    ].join('\n'),
+    systemPrompt: LEAD_SYSTEM_PROMPT,
+    cwd: options.repoDir,
+    outputSchema: diversityJudgementSchema,
+    // Everything needed is in the prompt; no repository access, no tools.
+    toolPolicy: { allowed: [], denied: ['Read', 'Write', 'Edit', 'Glob', 'Grep', 'Bash', 'WebFetch', 'WebSearch'] },
+    ...(options.timeoutMs !== undefined ? { timeoutMs: options.timeoutMs } : {}),
+    ledger: { projectId: options.manifest.projectId, round: options.round, slot: null },
+  });
+
+  if (!response.ok || !response.data) {
+    logger.warn('semantic diversity judgement unavailable; lexical score stands', { error: response.error });
+    return null;
+  }
+  return response.data;
+}
+
+function formatJudgementFeedback(judgement: DiversityJudgement): string {
+  return [
+    'A conceptual review found that the set is not structurally diverse, despite different wording:',
+    '',
+    ...judgement.collidingPairs.map((pair) => `- "${pair.a}" and "${pair.b}": ${pair.reason}`),
+    '',
+    judgement.guidance || 'Replace one design in each colliding pair with a structurally different position.',
+    '',
+    'Reminder: a different colour palette, type scale or mood is not a different design. Different',
+    'information hierarchy, navigation model, density and interaction model are.',
+  ].join('\n');
 }
 
 // ---------------------------------------------------------------------------
@@ -234,6 +371,20 @@ function buildPlanPrompt(options: PlanRoundOptions, feedback: string | null): st
     'Write positions as design decisions, not adjectives. "single scrolling canvas, no tab bar" is a position; ' +
       '"modern and clean" is not.',
   );
+
+  if (options.referenceBrief) {
+    sections.push(
+      '',
+      '## A reference-derived design already occupies slot A',
+      '',
+      `Name: ${options.referenceBrief.name}`,
+      `Thesis: ${options.referenceBrief.thesis}`,
+      '',
+      'It was interpreted from mockups the human supplied. Your exploratory designs compete WITH it: each',
+      'must be structurally distinct from the reference as well as from each other. Do not re-derive the',
+      'reference design; explore the positions it does not occupy.',
+    );
+  }
 
   if (options.nextGenerationPlan) {
     const plan = options.nextGenerationPlan;

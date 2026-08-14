@@ -36,7 +36,7 @@ built-in defaults → designlab.config.json → environment → CLI flags
   },
 
   "limits": {
-    "builderAttempts": 2,          // implementation attempts per candidate
+    "builderAttempts": 3,          // attempt → retry → escalated attempt; <3 makes Opus unreachable
     "escalations": 1,              // Opus escalations per candidate
     "concurrency": 2,              // candidates implemented in parallel
     "builderTimeoutMs": 2700000,   // 45 min per builder invocation
@@ -59,8 +59,17 @@ built-in defaults → designlab.config.json → environment → CLI flags
     "generateWorkflow": true,      // emit a workflow when the target lacks one
     "reuseExistingWorkflow": true, // prefer the target's own Android workflow
     "workflowPath": ".github/workflows/designlab-android.yml",
+    "commitWorkflowToCandidates": true, // Actions only runs workflows present on the pushed ref
+    "variant": "debug",            // debug APKs are auto-signed and device-installable
+    "releaseSigned": false,        // set true only when release signing is configured
+    "candidateIdentity": "off",    // "suffix" enables side-by-side install identities
+    "allowRiskyIdentity": false,   // apply identity even when Firebase/OAuth/Maps markers exist
     "pushBranches": true,          // push successful design branches
     "remote": "origin"
+  },
+
+  "design": {
+    "semanticDiversityJudge": true // one Fable conceptual check per high-diversity round
   },
 
   // "claude-code" drives the real CLI. "mock" runs the whole pipeline

@@ -23,6 +23,7 @@ import { nullLogger } from '../core/logger.js';
 import type { GateName, GateResult, GateStatus, ProtectionReport } from '../core/schemas.js';
 import type { ProtectionChecker } from '../protection/checker.js';
 import { formatProtectionReport } from '../protection/checker.js';
+import { runInvariantChecks } from '../protection/invariants.js';
 import type { GitClient } from '../git/git-client.js';
 
 export interface GateCommands {
@@ -99,11 +100,26 @@ export async function runGates(options: RunGatesOptions): Promise<GateRunResult>
 
     if (gate === 'protection') {
       const startedAt = Date.now();
-      protection = await options.checker.check(options.git, {
+      const changes = await options.git.changedFiles(options.baseSha, options.headSha, options.cwd);
+      const pathReport = options.checker.evaluate(changes, options.baseSha, options.headSha);
+
+      // Invariant guards look at the *content* of a handful of sensitive
+      // files (dependencies, app identity, permissions). They fire even when
+      // a path rule was waived: an exception authorising one kind of change
+      // to package.json must not authorise every kind.
+      const invariantViolations = await runInvariantChecks({
+        git: options.git,
         baseSha: options.baseSha,
         headSha: options.headSha,
         cwd: options.cwd,
+        changes,
       });
+
+      protection = {
+        ...pathReport,
+        passed: pathReport.passed && invariantViolations.length === 0,
+        violations: [...pathReport.violations, ...invariantViolations],
+      };
       const result: GateResult = {
         gate: 'protection',
         status: protection.passed ? 'passed' : 'failed',

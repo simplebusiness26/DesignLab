@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  assessInstallability,
   describeBuildStatus,
   notRequestedBuild,
   parseGitHubRepo,
@@ -154,17 +155,20 @@ describe('refreshBuildStatus', () => {
     expect(result.notes).toContain('No workflow run');
   });
 
-  it('ignores runs for a different commit', async () => {
+  it('never reports another commit\'s run as this commit\'s result', async () => {
+    // A stale SUCCESS on the branch, but for a different commit than the one
+    // DesignLab pushed. Reporting it would be a lie; the honest answer is
+    // "no run for our commit yet".
     const result = await refreshBuildStatus({
-      client: stubClient([run({ headSha: 'd'.repeat(40), conclusion: 'failure' })], [artifact()]),
+      client: stubClient([run({ headSha: 'd'.repeat(40), conclusion: 'success' })], [artifact()]),
       repo,
       branch: 'b',
       headSha: HEAD,
       current: baseRecord,
     });
-    // Falls back to the newest run only because no run matches; the point is
-    // that a stale success can never be reported as this commit's success.
-    expect(result.status).toBe('BUILD_FAILED');
+    expect(result.status).toBe('BUILD_PENDING');
+    expect(result.artifactUrl).toBeNull();
+    expect(result.notes).toContain('other commits');
   });
 
   it('leaves state untouched when GitHub is unreachable', async () => {
@@ -206,6 +210,63 @@ describe('refreshBuildStatus', () => {
       current: notRequestedBuild('dry run'),
     });
     expect(notRequested.status).toBe('BUILD_NOT_REQUESTED');
+  });
+});
+
+describe('assessInstallability', () => {
+  it('marks debug builds device-installable', () => {
+    expect(assessInstallability('debug', false).verdict).toBe('DEVICE_INSTALLABLE');
+  });
+
+  it('marks unsigned release builds NOT installable — a green build is not a usable APK', () => {
+    const result = assessInstallability('release', false);
+    expect(result.verdict).toBe('NOT_INSTALLABLE');
+    expect(result.reason).toContain('unsigned');
+  });
+
+  it('marks signed release builds installable', () => {
+    expect(assessInstallability('release', true).verdict).toBe('DEVICE_INSTALLABLE');
+  });
+
+  it('is honest when the variant is unknown', () => {
+    expect(assessInstallability(null, true).verdict).toBe('UNKNOWN');
+  });
+});
+
+describe('refreshBuildStatus installability', () => {
+  it('stamps installability onto BUILD_SUCCESS from the recorded variant', async () => {
+    const debugRecord = pendingBuild({
+      workflowPath: '.github/workflows/designlab-android.yml',
+      artifactName: 'testapp-R001-A-immersive.apk',
+      variant: 'debug',
+    });
+    const result = await refreshBuildStatus({
+      client: stubClient([run()], [artifact()]),
+      repo,
+      branch: 'design/r001-a-immersive',
+      headSha: HEAD,
+      current: debugRecord,
+    });
+    expect(result.status).toBe('BUILD_SUCCESS');
+    expect(result.installability).toBe('DEVICE_INSTALLABLE');
+  });
+
+  it('reports a successful unsigned release build as NOT_INSTALLABLE', async () => {
+    const releaseRecord = pendingBuild({
+      workflowPath: null,
+      artifactName: 'testapp-R001-A-immersive.apk',
+      variant: 'release',
+    });
+    const result = await refreshBuildStatus({
+      client: stubClient([run()], [artifact()]),
+      repo,
+      branch: 'design/r001-a-immersive',
+      headSha: HEAD,
+      current: releaseRecord,
+      releaseSigned: false,
+    });
+    expect(result.status).toBe('BUILD_SUCCESS');
+    expect(result.installability).toBe('NOT_INSTALLABLE');
   });
 });
 
@@ -300,9 +361,18 @@ describe('planWorkflow', () => {
     expect(plan.content).toContain('GITHUB_OUTPUT');
   });
 
-  it('uses flutter tooling for a Flutter target', () => {
+  it('uses flutter tooling for a Flutter target, debug by default', () => {
     const plan = planWorkflow({ manifest: manifestWith({ androidBuildSystem: 'flutter' }), ...options });
     expect(plan.content).toContain('subosito/flutter-action');
+    expect(plan.content).toContain('flutter build apk --debug');
+  });
+
+  it('builds the release variant only when asked', () => {
+    const plan = planWorkflow({
+      manifest: manifestWith({ androidBuildSystem: 'flutter' }),
+      ...options,
+      variant: 'release',
+    });
     expect(plan.content).toContain('flutter build apk --release');
   });
 

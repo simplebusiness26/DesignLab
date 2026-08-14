@@ -29,6 +29,8 @@ export type WorkflowStrategy = 'reuse-existing' | 'generated' | 'unsupported';
 
 export interface WorkflowPlan {
   strategy: WorkflowStrategy;
+  /** Android build variant the workflow produces. */
+  variant: 'debug' | 'release';
   /** Path the workflow lives at, relative to the repository root. */
   path: string | null;
   /** YAML body when `strategy` is "generated". */
@@ -46,14 +48,22 @@ export interface WorkflowPlanOptions {
   reuseExisting: boolean;
   generate: boolean;
   workflowPath: string;
+  /**
+   * Build variant. Defaults to `debug` because a debug APK is signed with the
+   * debug keystore and installs on any device; an unsigned release APK does
+   * not install anywhere and is useless for design evaluation.
+   */
+  variant?: 'debug' | 'release';
 }
 
 export function planWorkflow(options: WorkflowPlanOptions): WorkflowPlan {
   const { manifest } = options;
+  const variant = options.variant ?? 'debug';
 
   if (options.reuseExisting && manifest.ci.androidWorkflowPath) {
     return {
       strategy: 'reuse-existing',
+      variant,
       path: manifest.ci.androidWorkflowPath,
       content: null,
       reason: `The repository already builds Android artifacts in ${manifest.ci.androidWorkflowPath}.`,
@@ -67,6 +77,7 @@ export function planWorkflow(options: WorkflowPlanOptions): WorkflowPlan {
   if (!options.generate) {
     return {
       strategy: 'unsupported',
+      variant,
       path: null,
       content: null,
       reason: 'Workflow generation is disabled in configuration and no existing Android workflow was found.',
@@ -78,6 +89,7 @@ export function planWorkflow(options: WorkflowPlanOptions): WorkflowPlan {
   if (!generator) {
     return {
       strategy: 'unsupported',
+      variant,
       path: null,
       content: null,
       reason: `No APK build strategy is available for android build system "${manifest.androidBuildSystem}".`,
@@ -89,10 +101,11 @@ export function planWorkflow(options: WorkflowPlanOptions): WorkflowPlan {
 
   return {
     strategy: 'generated',
+    variant,
     path: options.workflowPath,
-    content: generator(manifest, options.branchPrefix),
-    reason: `Generated a workflow for the detected build system "${manifest.androidBuildSystem}".`,
-    requirements: generatorRequirements(manifest),
+    content: generator(manifest, options.branchPrefix, variant),
+    reason: `Generated a ${variant} workflow for the detected build system "${manifest.androidBuildSystem}".`,
+    requirements: generatorRequirements(manifest, variant),
   };
 }
 
@@ -100,7 +113,7 @@ export function planWorkflow(options: WorkflowPlanOptions): WorkflowPlan {
 // Generators
 // ---------------------------------------------------------------------------
 
-type Generator = (manifest: AppManifest, branchPrefix: string) => string;
+type Generator = (manifest: AppManifest, branchPrefix: string, variant: 'debug' | 'release') => string;
 
 const GENERATORS: Partial<Record<AppManifest['androidBuildSystem'], Generator>> = {
   gradle: generateGradleWorkflow,
@@ -248,15 +261,16 @@ const JAVA_SETUP = `
         uses: android-actions/setup-android@v3
 `;
 
-function generateGradleWorkflow(manifest: AppManifest, branchPrefix: string): string {
+function generateGradleWorkflow(manifest: AppManifest, branchPrefix: string, variant: 'debug' | 'release'): string {
   const isJsProject = manifest.packageManager !== 'gradle' && manifest.packageManager !== 'unknown';
+  const task = gradleTask(variant);
   return `${workflowHeader(manifest, branchPrefix, 'DesignLab Android Build')}${
     isJsProject ? nodeSetupSteps(manifest) : ''
   }${JAVA_SETUP}
       - name: Grant execute permission to the Gradle wrapper
         run: chmod +x android/gradlew || chmod +x gradlew || true
 
-      - name: Build release APK
+      - name: Build ${variant} APK
         shell: bash
         run: |
           set -euo pipefail
@@ -264,31 +278,37 @@ function generateGradleWorkflow(manifest: AppManifest, branchPrefix: string): st
             cd android
           fi
           if [ -x ./gradlew ]; then
-            ./gradlew assembleRelease --no-daemon --stacktrace
+            ./gradlew ${task} --no-daemon --stacktrace
           else
-            gradle assembleRelease --no-daemon --stacktrace
+            gradle ${task} --no-daemon --stacktrace
           fi
 ${UPLOAD_STEP}`;
 }
 
-function generateExpoPrebuildWorkflow(manifest: AppManifest, branchPrefix: string): string {
+function generateExpoPrebuildWorkflow(
+  manifest: AppManifest,
+  branchPrefix: string,
+  variant: 'debug' | 'release',
+): string {
   return `${workflowHeader(manifest, branchPrefix, 'DesignLab Android Build (Expo)')}${nodeSetupSteps(
     manifest,
   )}${JAVA_SETUP}
       - name: Generate native Android project
         run: npx expo prebuild --platform android --no-install
 
-      - name: Build release APK
+      - name: Build ${variant} APK
         shell: bash
         run: |
           set -euo pipefail
           cd android
           chmod +x ./gradlew
-          ./gradlew assembleRelease --no-daemon --stacktrace
+          ./gradlew ${gradleTask(variant)} --no-daemon --stacktrace
 ${UPLOAD_STEP}`;
 }
 
-function generateEasWorkflow(manifest: AppManifest, branchPrefix: string): string {
+function generateEasWorkflow(manifest: AppManifest, branchPrefix: string, _variant: 'debug' | 'release'): string {
+  // EAS builds are governed by the eas.json profile; the "preview" profile
+  // produces an internal-distribution APK that installs on device.
   return `${workflowHeader(manifest, branchPrefix, 'DesignLab Android Build (EAS)')}${nodeSetupSteps(manifest)}
       - name: Set up EAS
         uses: expo/expo-github-action@v8
@@ -316,7 +336,11 @@ function generateEasWorkflow(manifest: AppManifest, branchPrefix: string): strin
 `;
 }
 
-function generateFlutterWorkflow(manifest: AppManifest, branchPrefix: string): string {
+function generateFlutterWorkflow(
+  manifest: AppManifest,
+  branchPrefix: string,
+  variant: 'debug' | 'release',
+): string {
   return `${workflowHeader(manifest, branchPrefix, 'DesignLab Android Build (Flutter)')}${JAVA_SETUP}
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -327,12 +351,16 @@ function generateFlutterWorkflow(manifest: AppManifest, branchPrefix: string): s
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build release APK
-        run: flutter build apk --release
+      - name: Build ${variant} APK
+        run: flutter build apk --${variant}
 ${UPLOAD_STEP}`;
 }
 
-function generateCapacitorWorkflow(manifest: AppManifest, branchPrefix: string): string {
+function generateCapacitorWorkflow(
+  manifest: AppManifest,
+  branchPrefix: string,
+  variant: 'debug' | 'release',
+): string {
   return `${workflowHeader(manifest, branchPrefix, 'DesignLab Android Build (Capacitor)')}${nodeSetupSteps(
     manifest,
   )}${JAVA_SETUP}
@@ -342,29 +370,36 @@ function generateCapacitorWorkflow(manifest: AppManifest, branchPrefix: string):
       - name: Sync Capacitor Android project
         run: npx cap sync android
 
-      - name: Build release APK
+      - name: Build ${variant} APK
         shell: bash
         run: |
           set -euo pipefail
           cd android
           chmod +x ./gradlew
-          ./gradlew assembleRelease --no-daemon --stacktrace
+          ./gradlew ${gradleTask(variant)} --no-daemon --stacktrace
 ${UPLOAD_STEP}`;
 }
 
-function generatorRequirements(manifest: AppManifest): string[] {
-  const requirements = [
-    'GitHub Actions must be enabled on the target repository.',
-    'The generated workflow builds an unsigned release APK; add your signing configuration for installable builds.',
-  ];
+function gradleTask(variant: 'debug' | 'release'): string {
+  return variant === 'debug' ? 'assembleDebug' : 'assembleRelease';
+}
+
+function generatorRequirements(manifest: AppManifest, variant: 'debug' | 'release'): string[] {
+  const requirements = ['GitHub Actions must be enabled on the target repository.'];
+
+  if (variant === 'debug') {
+    requirements.push(
+      'Debug APKs are signed with the debug keystore and install on any device with "install unknown apps" allowed.',
+    );
+  } else {
+    requirements.push(
+      'Release builds are UNSIGNED unless the target has signing configured — an unsigned APK will not install. ' +
+        'Either configure release signing in the repository, or use the default debug variant for device evaluation.',
+    );
+  }
 
   if (manifest.androidBuildSystem === 'eas-build') {
     requirements.push('Add an EXPO_TOKEN repository secret so EAS builds can authenticate.');
-  }
-  if (manifest.androidBuildSystem === 'gradle' || manifest.androidBuildSystem === 'expo-prebuild') {
-    requirements.push(
-      'If your release build requires a keystore, add the keystore and its secrets to the repository and reference them in the workflow.',
-    );
   }
 
   return requirements;

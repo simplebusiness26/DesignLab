@@ -87,16 +87,19 @@ designlab round --designs 4 --diversity high
 | `--designs <n>` | Number of designs, 1–8. Default 4. |
 | `--diversity <level>` | `low`, `medium`, `high`. Default `high`. |
 | `--no-push` | Do not push successful branches. |
-| `--write-workflow` | Write the generated Actions workflow into each candidate worktree. |
+| `--write-workflow` | Commit the generated Actions workflow onto candidate branches even without pushing. |
+| `--reference <path>` | Directory (or single image) of UI mockups; becomes an additional slot-A candidate. See [`reference-candidates.md`](reference-candidates.md). |
 
 **Evolution.** If the previous round has a recorded winner and a saved
 next-generation plan, this round automatically bases itself on the winner's
 branch and commit rather than the original base branch. That is what makes
 improvements compound across generations.
 
-**The workflow is not written by default.** It is a change to the target
-repository, and you should opt into it rather than find it in a diff. Use
-`--write-workflow`, or `designlab workflow --write`.
+**Workflow delivery.** When pushing, the generated workflow is committed
+onto each candidate branch as a marked, removable `[designlab-plumbing]`
+commit — GitHub Actions only runs workflows present on the pushed ref. The
+base branch is never touched. `--write-workflow` forces the same commit even
+in a non-pushing or dry run, so you can inspect it.
 
 ---
 
@@ -146,6 +149,28 @@ next-generation plan rather than something a model might forget.
 
 A candidate can only win if it has a committed implementation and did not
 fail; otherwise it would poison the next generation's base commit.
+
+---
+
+## `designlab merge-check`
+
+Verifies a candidate branch is ready for a **human** merge; never merges.
+
+```bash
+designlab merge-check 1 C
+```
+
+| Flag | Meaning |
+| --- | --- |
+| `--repo <url\|path>` | Target repository. |
+| `--base <branch>` | Merge target (defaults to the round's base branch). |
+
+Checks that temporary engine commits (identity overlay, build workflow) are
+peelable from the tip, that the design content re-passes the Functionality
+Contract against the *current* base, and that the merge is conflict-free
+(`git merge-tree`). Prints `MERGE_READY` with exact merge commands, or
+`NOT_MERGE_READY` with every blocker (exit 8). See
+[`merge-and-identity.md`](merge-and-identity.md).
 
 ---
 
