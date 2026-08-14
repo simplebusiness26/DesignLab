@@ -1,0 +1,78 @@
+name: Materialize DesignLab 2.0 knowledge
+
+on:
+  push:
+    branches:
+      - designlab-2.0
+    paths:
+      - 'knowledge/registry/**'
+      - '.github/workflows/materialize-designlab-knowledge.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out designlab-2.0
+        uses: actions/checkout@v4
+        with:
+          ref: designlab-2.0
+          fetch-depth: 0
+
+      - name: Materialize and verify the knowledge corpus
+        run: |
+          python3 knowledge/registry/materialize.py
+          python3 - <<'PY'
+          from pathlib import Path
+          required = [
+              'knowledge/personas/ux/ocho/SOURCES.md',
+              'knowledge/personas/ux/ocho/RESEARCH_DOSSIER.md',
+              'knowledge/personas/ux/ocho/PERSONA_PACK.md',
+              'knowledge/personas/ux/jordan-singer/SOURCES.md',
+              'knowledge/personas/ux/jordan-singer/RESEARCH_DOSSIER.md',
+              'knowledge/personas/ux/jordan-singer/PERSONA_PACK.md',
+              'knowledge/personas/ux/loren-brichter/SOURCES.md',
+              'knowledge/personas/ux/loren-brichter/RESEARCH_DOSSIER.md',
+              'knowledge/personas/ux/loren-brichter/PERSONA_PACK.md',
+              'knowledge/personas/ux/christian-selig/SOURCES.md',
+              'knowledge/personas/ux/christian-selig/RESEARCH_DOSSIER.md',
+              'knowledge/personas/ux/christian-selig/PERSONA_PACK.md',
+              'knowledge/personas/visual/localthunk/SOURCES.md',
+              'knowledge/personas/visual/localthunk/RESEARCH_DOSSIER.md',
+              'knowledge/personas/visual/localthunk/PERSONA_PACK.md',
+              'knowledge/personas/visual/tobias-van-schneider/SOURCES.md',
+              'knowledge/personas/visual/tobias-van-schneider/RESEARCH_DOSSIER.md',
+              'knowledge/personas/visual/tobias-van-schneider/PERSONA_PACK.md',
+              'knowledge/personas/visual/raja-vijayaraman/SOURCES.md',
+              'knowledge/personas/visual/raja-vijayaraman/RESEARCH_DOSSIER.md',
+              'knowledge/personas/visual/raja-vijayaraman/PERSONA_PACK.md',
+              'knowledge/personas/visual/devin-davies/SOURCES.md',
+              'knowledge/personas/visual/devin-davies/RESEARCH_DOSSIER.md',
+              'knowledge/personas/visual/devin-davies/PERSONA_PACK.md',
+              'knowledge/validation/xplorer-messages/FEATURE_PACKET.md',
+              'knowledge/validation/xplorer-messages/COMPARATIVE_REVIEW.md',
+          ]
+          missing = [p for p in required if not Path(p).is_file()]
+          if missing:
+              raise SystemExit('Missing required materialized files: ' + ', '.join(missing))
+          persona_files = list(Path('knowledge/personas').rglob('*.md'))
+          if len(persona_files) != 24:
+              raise SystemExit(f'Expected 24 persona research files, found {len(persona_files)}')
+          print('Required persona and validation inventory verified')
+          PY
+
+      - name: Commit readable knowledge files
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add knowledge
+          if git diff --cached --quiet; then
+            echo 'Knowledge files are already materialized.'
+            exit 0
+          fi
+          git commit -m 'knowledge: materialize complete DesignLab 2.0 corpus'
+          git push origin HEAD:designlab-2.0
