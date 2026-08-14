@@ -74,7 +74,7 @@ const protGate = candidate.gates.find((g) => g.gate === 'protection');
 if (protGate) {
   protGate.status = 'passed';
   protGate.summary = formatProtectionReport(report);
-  protGate.reason = null;
+  delete protGate.reason;
   protGate.durationMs = durationMs;
   protGate.ranAt = new Date().toISOString();
 }
