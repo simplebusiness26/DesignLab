@@ -1,0 +1,61 @@
+{
+  "name": "designlab",
+  "version": "1.0.0",
+  "description": "Evolutionary UI experimentation engine for existing mobile applications",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=20.10.0"
+  },
+  "bin": {
+    "designlab": "./bin/designlab.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "bin",
+    "dist",
+    "templates",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.build.json --watch",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "schemas": "node --experimental-strip-types scripts/emit-schemas.ts",
+    "verify": "npm run typecheck && npm run lint && npm run test",
+    "designlab": "node bin/designlab.js"
+  },
+  "dependencies": {
+    "commander": "^12.1.0",
+    "zod": "^3.23.8",
+    "zod-to-json-schema": "^3.23.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.13.0",
+    "@types/node": "^22.7.9",
+    "eslint": "^9.13.0",
+    "typescript": "^5.6.3",
+    "typescript-eslint": "^8.11.0",
+    "vitest": "^2.1.4"
+  },
+  "keywords": [
+    "design",
+    "ui",
+    "android",
+    "claude",
+    "agents",
+    "evolutionary"
+  ]
+}

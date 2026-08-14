@@ -1,0 +1,20 @@
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# DesignLab runtime state and target-app workspaces are machine-local.
+# Schemas and committed round exports live outside these paths.
+.designlab/workspace/
+.designlab/state/
+.designlab/logs/
+.designlab/cache/
+.designlab/tmp/
+
+.env
+.env.*
+!.env.example
+
+.DS_Store
+*.log
+npm-debug.log*
