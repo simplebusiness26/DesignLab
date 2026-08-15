@@ -63,17 +63,22 @@ jobs:
                     .replace('__LABELS__', ''.join(labels))
                     .replace('__FRAMES__', ''.join(frames))
                     .replace('__SELECTORS__', ''.join(selectors)))
-          out = root/'Xplorer-Messages-UX-Review-Standalone.html'
-          out.write_text(doc, encoding='utf-8')
-          print(f'Built {out} ({out.stat().st_size} bytes) with {len(frames)} embedded Round 2 prototypes')
+          standalone = root/'Xplorer-Messages-UX-Review-Standalone.html'
+          default = root/'index.html'
+          standalone.write_text(doc, encoding='utf-8')
+          default.write_text(doc, encoding='utf-8')
+          print(f'Built Round 2 review ({len(doc.encode("utf-8"))} bytes) with {len(frames)} embedded prototypes')
           PY
 
       - name: Verify Round 2 switcher and embedded prototypes
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          p=Path('prototypes/xplorer-messages/Xplorer-Messages-UX-Review-Standalone.html')
+          root=Path('prototypes/xplorer-messages')
+          p=root/'Xplorer-Messages-UX-Review-Standalone.html'
+          d=root/'index.html'
           s=p.read_text(encoding='utf-8')
+          assert d.read_bytes() == p.read_bytes(), 'default index and standalone review differ'
           assert s.count('srcdoc=') == 4, s.count('srcdoc=')
           assert s.count('type="radio"') == 4, s.count('type="radio"')
           outer=s.split('srcdoc=',1)[0]
@@ -86,18 +91,18 @@ jobs:
           for term in ['Round 2 · Pocket Campfire','Round 2 · Message System','Round 2 · Thumbline','Round 2 · Native Power Inbox']:
               assert term in s, term
           assert '../' not in s
-          print('PASS: Round 2 = 4 embedded prototypes + CSS-only outer tabs + no external prototype paths')
+          print('PASS: Round 2 default + standalone identical, 4 embedded prototypes, CSS-only outer tabs')
           PY
 
-      - name: Commit Round 2 standalone review file
+      - name: Commit Round 2 review launchers
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add prototypes/xplorer-messages/Xplorer-Messages-UX-Review-Standalone.html
+          git add prototypes/xplorer-messages/Xplorer-Messages-UX-Review-Standalone.html prototypes/xplorer-messages/index.html
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "ux: rebuild standalone Xplorer review for Round 2"
+            git commit -m "ux: make Round 2 Xplorer review the default launcher"
             git push origin HEAD:designlab-2.0
           fi
 
