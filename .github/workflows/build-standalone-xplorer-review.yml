@@ -5,6 +5,10 @@ on:
     branches: [designlab-2.0]
     paths:
       - '.github/workflows/build-standalone-xplorer-review.yml'
+      - 'prototypes/xplorer-messages/01-ocho-quiet-campfire/index.html'
+      - 'prototypes/xplorer-messages/02-jordan-message-switchboard/index.html'
+      - 'prototypes/xplorer-messages/03-loren-flow-through/index.html'
+      - 'prototypes/xplorer-messages/04-christian-native-power/index.html'
   workflow_dispatch:
 
 permissions:
@@ -18,7 +22,7 @@ jobs:
         with:
           ref: designlab-2.0
 
-      - name: Build single self-contained review HTML
+      - name: Build Round 2 self-contained review HTML
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -26,9 +30,9 @@ jobs:
 
           root = Path('prototypes/xplorer-messages')
           items = [
-              ('Ocho', 'Quiet Campfire', root/'01-ocho-quiet-campfire/index.html'),
-              ('Jordan', 'Message Switchboard', root/'02-jordan-message-switchboard/index.html'),
-              ('Loren', 'Flow Through', root/'03-loren-flow-through/index.html'),
+              ('Ocho', 'Pocket Campfire', root/'01-ocho-quiet-campfire/index.html'),
+              ('Jordan', 'Message System', root/'02-jordan-message-switchboard/index.html'),
+              ('Loren', 'Thumbline', root/'03-loren-flow-through/index.html'),
               ('Christian', 'Native Power Inbox', root/'04-christian-native-power/index.html'),
           ]
 
@@ -41,29 +45,30 @@ jobs:
               safe = html.escape(content, quote=True)
               checked = ' checked' if i == 0 else ''
               controls.append(f'<input class="switch" type="radio" name="concept" id="concept-{i}"{checked}>')
-              labels.append(f'<label class="tab" for="concept-{i}">{name}</label>')
+              labels.append(f'<label class="tab" for="concept-{i}"><b>{name}</b><span>{title}</span></label>')
               frames.append(f'<iframe class="frame frame-{i}" title="{name} — {title}" srcdoc="{safe}"></iframe>')
               selectors.append(f'#concept-{i}:checked ~ .shell .tab[for="concept-{i}"]{{background:#17181a;color:#fff;border-color:#17181a}}')
+              selectors.append(f'#concept-{i}:checked ~ .shell .tab[for="concept-{i}"] span{{color:#c9cbd0}}')
               selectors.append(f'#concept-{i}:checked ~ .shell .frame-{i}{{display:block}}')
 
           doc = '''<!doctype html>
           <html lang="en"><head><meta charset="utf-8" />
           <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-          <title>DesignLab 2.0 — Xplorer Messages UX Review Standalone</title>
+          <title>DesignLab 2.0 — Xplorer Messages UX Round 2</title>
           <style>
           :root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color-scheme:light;--ink:#17181a;--muted:#6f737b;--line:#dfe2e6;--bg:#eef0f3}
-          *{box-sizing:border-box}html,body{margin:0;height:100%;background:var(--bg);color:var(--ink)}body{overflow:hidden}.switch{position:fixed;left:-9999px;opacity:0;pointer-events:none}.shell{height:100dvh;display:flex;flex-direction:column}.bar{flex:0 0 auto;background:rgba(255,255,255,.97);backdrop-filter:blur(16px);border-bottom:1px solid var(--line);padding:max(9px,env(safe-area-inset-top)) 9px 8px}.eyebrow{font-size:10px;color:var(--muted);font-weight:800;letter-spacing:.08em;text-transform:uppercase}.title{font-size:17px;font-weight:800;margin-top:2px}.tabs{display:flex;gap:6px;overflow:auto;margin-top:9px;scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}.tab{display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);background:#fff;color:#555a62;border-radius:11px;padding:9px 11px;white-space:nowrap;font-size:12px;font-weight:760;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent}.tab:active{transform:scale(.98)}.stage{position:relative;flex:1;min-height:0}.frame{position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff;display:none}.foot{font-size:10px;color:var(--muted);margin-top:6px;line-height:1.35}.help{font-weight:700;color:#45484e}.fallback{display:none}.switch:focus-visible ~ .shell .tabs{outline:3px solid rgba(23,24,26,.18);outline-offset:2px}__SELECTORS__@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}@media(max-width:480px){.title{font-size:16px}.tab{padding:9px 10px}}
-          </style></head><body>__CONTROLS__<div class="shell"><header class="bar"><div class="eyebrow">DesignLab 2.0 · UX tournament</div><div class="title">Xplorer Messages — standalone review</div><div class="tabs" role="tablist" aria-label="UX prototypes">__LABELS__</div><div class="foot"><span class="help">Tap a name to switch.</span> The four-way switcher uses HTML/CSS only, so it works even when Android blocks page JavaScript. Each prototype remains fully embedded in this one file.</div></header><main class="stage">__FRAMES__</main></div></body></html>'''
+          *{box-sizing:border-box}html,body{margin:0;height:100%;background:var(--bg);color:var(--ink)}body{overflow:hidden}.switch{position:fixed;left:-9999px;opacity:0;pointer-events:none}.shell{height:100dvh;display:flex;flex-direction:column}.bar{flex:0 0 auto;background:rgba(255,255,255,.97);backdrop-filter:blur(16px);border-bottom:1px solid var(--line);padding:max(9px,env(safe-area-inset-top)) 9px 8px}.eyebrow{font-size:10px;color:var(--muted);font-weight:800;letter-spacing:.08em;text-transform:uppercase}.title{font-size:17px;font-weight:800;margin-top:2px}.tabs{display:flex;gap:6px;overflow:auto;margin-top:9px;scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}.tab{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;min-width:104px;border:1px solid var(--line);background:#fff;color:#555a62;border-radius:11px;padding:8px 10px;white-space:nowrap;font-size:12px;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent}.tab b{font-size:12px;font-weight:820}.tab span{font-size:9px;color:#858991;margin-top:2px;font-weight:650}.tab:active{transform:scale(.98)}.stage{position:relative;flex:1;min-height:0}.frame{position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff;display:none}.foot{font-size:10px;color:var(--muted);margin-top:6px;line-height:1.35}.help{font-weight:750;color:#45484e}.switch:focus-visible ~ .shell .tabs{outline:3px solid rgba(23,24,26,.18);outline-offset:2px}__SELECTORS__@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}@media(max-width:480px){.title{font-size:16px}.tab{min-width:98px;padding:8px 9px}}
+          </style></head><body>__CONTROLS__<div class="shell"><header class="bar"><div class="eyebrow">DesignLab 2.0 · UX tournament · Round 2</div><div class="title">Xplorer Messages — stronger persona directions</div><div class="tabs" role="tablist" aria-label="Round 2 UX prototypes">__LABELS__</div><div class="foot"><span class="help">Tap a designer name to switch.</span> The outer switcher uses HTML/CSS only for Android reliability. Each Round 2 prototype is fully embedded in this one file.</div></header><main class="stage">__FRAMES__</main></div></body></html>'''
           doc = (doc.replace('__CONTROLS__', ''.join(controls))
                     .replace('__LABELS__', ''.join(labels))
                     .replace('__FRAMES__', ''.join(frames))
                     .replace('__SELECTORS__', ''.join(selectors)))
           out = root/'Xplorer-Messages-UX-Review-Standalone.html'
           out.write_text(doc, encoding='utf-8')
-          print(f'Built {out} ({out.stat().st_size} bytes) with {len(frames)} embedded prototypes')
+          print(f'Built {out} ({out.stat().st_size} bytes) with {len(frames)} embedded Round 2 prototypes')
           PY
 
-      - name: Verify standalone switcher and embedded prototypes
+      - name: Verify Round 2 switcher and embedded prototypes
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -71,17 +76,20 @@ jobs:
           s=p.read_text(encoding='utf-8')
           assert s.count('srcdoc=') == 4, s.count('srcdoc=')
           assert s.count('type="radio"') == 4, s.count('type="radio"')
-          assert 'querySelectorAll' not in s.split('srcdoc=',1)[0]
+          outer=s.split('srcdoc=',1)[0]
+          assert 'querySelectorAll' not in outer
           for i in range(4):
               assert f'for="concept-{i}"' in s
               assert f'#concept-{i}:checked' in s
-          for term in ['Quiet Campfire','Message Switchboard','Flow Through','Native Power Inbox']:
+          for term in ['Pocket Campfire','Message System','Thumbline','Native Power Inbox']:
+              assert term in s, term
+          for term in ['Round 2 · Pocket Campfire','Round 2 · Message System','Round 2 · Thumbline','Round 2 · Native Power Inbox']:
               assert term in s, term
           assert '../' not in s
-          print('PASS: 4 embedded prototypes + CSS-only tab switching + no external prototype paths')
+          print('PASS: Round 2 = 4 embedded prototypes + CSS-only outer tabs + no external prototype paths')
           PY
 
-      - name: Commit standalone review file
+      - name: Commit Round 2 standalone review file
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -89,18 +97,18 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "fix: make standalone Xplorer review tabs script-free"
+            git commit -m "ux: rebuild standalone Xplorer review for Round 2"
             git push origin HEAD:designlab-2.0
           fi
 
-      - name: Prepare one-file artifact
+      - name: Prepare one-file Round 2 artifact
         run: |
           mkdir -p standalone-download
           cp prototypes/xplorer-messages/Xplorer-Messages-UX-Review-Standalone.html standalone-download/index.html
 
-      - name: Upload one-file standalone artifact
+      - name: Upload Round 2 standalone artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Xplorer-Messages-UX-Review-Standalone-CSS-Tabs
+          name: Xplorer-Messages-UX-Round-2
           path: standalone-download/index.html
           retention-days: 30
