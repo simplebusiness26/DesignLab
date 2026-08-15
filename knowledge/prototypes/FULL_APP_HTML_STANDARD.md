@@ -1,41 +1,89 @@
-# Full-App HTML Review Standard
+# Full-App HTML Tournament Standard
 
 This is the mandatory review surface for DesignLab 2.0.
 
 ## Core rule
-A tournament candidate is not review-ready unless the user can open it as a self-contained HTML experience that represents the full product context around the area being redesigned.
+A tournament contestant does **not** redesign one isolated feature inside a shared shell.
 
-For Xplorer, that means the candidate must feel like opening Xplorer, not opening a detached mock-up of one screen.
+Each contestant redesigns the **whole inspected product experience** as one coherent system, while preserving Product Truth.
 
-## Every candidate must include
-- the real product shell and primary navigation structure derived from Product Truth;
-- enough surrounding screens and routes to understand where the redesigned area lives;
-- working navigation into and back out of the redesigned area;
-- representative map/feed/profile/messages/manager or other relevant product surfaces when they form the surrounding experience;
-- the candidate UX embedded in its correct place inside that shell;
-- populated, empty, loading, error and permission/state variants relevant to the candidate;
-- scrolling, keyboard behaviour, gestures, transitions and back-navigation needed to judge continuity;
-- no invented product capability, route, identity model or backend;
-- clear labels for any simulated data or non-production behaviour.
+For Xplorer, that means every UX or visual contestant must produce a complete, navigable Xplorer HTML candidate covering the real app structure and declared routes. The user should be judging "this version of Xplorer" versus "that version of Xplorer", not "this Messages screen" versus "that Messages screen".
+
+## What must remain identical across contestants
+- the inspected real features and capabilities;
+- the route inventory and information architecture unless the tournament is explicitly allowed to propose a navigation reorganisation;
+- the universal Explorer identity model;
+- Manager as a capability/context, not a separate identity;
+- privacy, permission and ownership rules;
+- real entity relationships: businesses, properties, places, events, activity clubs, link-ups, Moments, Memories, reviews, messages, boards, profiles, manager tools and admin tools;
+- backend boundaries and Product Truth constraints;
+- the same representative sample scenarios so candidates can be compared fairly.
+
+## What each contestant may redesign across the whole app
+- global navigation and hierarchy;
+- app shell and chrome;
+- page composition;
+- information density;
+- card/list/grid systems;
+- interactions, gestures and transitions;
+- component treatments;
+- state presentation;
+- typography, spacing, colour, depth and motion when the tournament stage permits it;
+- how repeated patterns behave across every relevant screen.
+
+A contestant must carry its design language through the complete product rather than making only the hero screen distinctive.
+
+## Whole-app coverage requirement
+Each candidate must include, at minimum:
+- the real primary navigation roots;
+- Map and Discover;
+- Create flows;
+- Explorer profiles and social surfaces;
+- Messages and existing board gateways;
+- Feed, Moments and Memories;
+- Leaderboards and Notifications;
+- Live activity and check-ins;
+- Link-ups;
+- businesses, properties and public places;
+- activity clubs and events;
+- reviews and verified-review entry points;
+- Manager surfaces;
+- Settings and safety;
+- authentication surfaces;
+- Admin surfaces;
+- every other declared route represented sufficiently that the candidate is genuinely a whole-app system rather than a collection of selected showcase screens.
 
 ## Fidelity rule
-The shell does not need a live backend, but its information architecture, routes, capabilities, labels and relationships must come from the inspected real app. Fake data may simulate real states; fake features may not be added.
+The HTML does not require a live backend. Fake/sample data may simulate real states, but fake features may not be added.
+
+Every route, capability, label, relationship and permission assumption must come from the inspected app or be explicitly marked as a proposal requiring approval.
 
 ## Tournament rule
-All contestants receive the same full-app shell contract and Product Truth. They may redesign the target experience and its necessary surrounding transitions, but they may not quietly redesign unrelated product functionality merely to make their concept look better.
+All contestants receive the same Product Truth, route inventory, capability map, sample scenarios and acceptance gates.
 
-## Review rule
-The user judges each candidate in context: how it enters from the rest of Xplorer, how it feels while using it, and how it returns to the surrounding app. A beautiful isolated screen that feels wrong inside Xplorer fails.
+They are evaluated on whether their design system holds together across the entire app.
+
+A contestant fails if it looks distinctive on Map or Messages but collapses into generic UI elsewhere.
+
+## UX tournament
+UX contestants must make the whole app recognisably attributable to their design lens through behaviour, hierarchy, navigation, state handling and interaction patterns — not merely colour or styling.
+
+## Visual tournament
+Visual contestants receive the locked whole-app UX and apply their visual direction across the entire app. No visual candidate may be judged from only a hero screen.
 
 ## Packaging
-Each candidate must be deliverable as a self-contained HTML file or self-contained HTML folder that opens in a normal mobile browser. Combined tournament review files may embed each full-app candidate, but must not replace the candidate's own full-app context.
+Each contestant must be deliverable as a self-contained mobile-friendly HTML file or HTML folder.
+
+A combined tournament review file may embed the complete contestants and provide A/B/C/D switching, but each embedded option must itself remain a complete navigable product.
 
 ## Acceptance test
-Before calling a candidate ready, verify:
-1. I can recognise this as the product before entering the redesigned feature.
-2. I can navigate into the feature from the surrounding app.
-3. I can use the core interaction flow.
-4. I can navigate back out without breaking context.
-5. I did not need an explanation to imagine how the design would fit into the app.
+Before calling a contestant ready, verify:
+1. I can enter the candidate and immediately recognise a complete Xplorer product.
+2. I can move between the main product areas without leaving the candidate.
+3. The design language remains coherent across social, discovery, place, creation, manager and admin surfaces.
+4. All critical real capabilities remain represented.
+5. No invented feature or identity model has appeared.
+6. The contestant is distinguishable from the others by how the whole product works, not just by colours.
+7. I can make a product-level choice without having to imagine how the rest of the app would look.
 
-If any answer is no, the candidate is incomplete.
+If any answer is no, the contestant is incomplete.
