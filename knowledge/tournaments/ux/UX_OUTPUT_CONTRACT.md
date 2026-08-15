@@ -20,6 +20,16 @@ Every contestant returns:
 17. Implementation considerations
 18. Strengths
 19. Trade-offs
-20. Interactive prototype specification
+20. Full-app HTML prototype specification
+21. Full-app context verification
+
+## Mandatory review context
+The interactive output must follow `knowledge/prototypes/FULL_APP_HTML_STANDARD.md`.
+
+The candidate may not be presented as an isolated feature screen. It must be embedded inside a recognisable, navigable representation of the inspected product so the user can enter the redesigned area from the surrounding app and return to that surrounding context.
+
+The full-app shell must be derived from Product Truth. It may simulate data, but it may not invent routes, capabilities, identity models, backend behaviour or unrelated product features.
+
+A candidate that is visually strong in isolation but cannot be judged inside the real product context is incomplete and must not advance to user selection.
 
 Do not spend output on biographies or design-theory essays.
