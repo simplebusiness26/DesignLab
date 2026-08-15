@@ -16,9 +16,14 @@
       "devin-davies": "1.0.0"
     }
   },
-  "uxTournament": "foundation-ready",
-  "visualTournament": "foundation-ready",
+  "reviewSurface": "full-app-html",
+  "currentProduct": "xplorer",
+  "currentTarget": "messages",
+  "processRestarted": "2026-08-15",
+  "previousXplorerMessagesRounds": "superseded-by-full-app-html-restart",
+  "uxTournament": "restart-from-product-truth",
+  "visualTournament": "blocked-until-new-ux-lock",
   "approvedUx": null,
   "approvedVisual": null,
-  "implementation": "not-started"
+  "implementation": "paused-pending-restarted-design-process"
 }
