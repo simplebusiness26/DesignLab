@@ -1,0 +1,41 @@
+name: Apply Round 2 Prototype
+
+on:
+  push:
+    branches: [designlab-2.0]
+    paths:
+      - '.github/workflows/apply-round2-prototype.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: designlab-2.0
+      - name: Reconstruct and verify Loren Round 2
+        env:
+          PAYLOAD: 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
+          EXPECTED_SHA: ceef14eaf26892477da4e9e94ed0ebbb5f89d7446e016d530c54f42211004736
+        run: |
+          python3 - <<'PY'
+          import os, base64, gzip, hashlib
+          from pathlib import Path
+          data = gzip.decompress(base64.b64decode(os.environ['PAYLOAD']))
+          got = hashlib.sha256(data).hexdigest()
+          assert got == os.environ['EXPECTED_SHA'], (got, os.environ['EXPECTED_SHA'])
+          path = Path('prototypes/xplorer-messages/03-loren-flow-through/index.html')
+          path.write_bytes(data)
+          assert hashlib.sha256(path.read_bytes()).hexdigest() == os.environ['EXPECTED_SHA']
+          print('PASS Loren exact SHA:', got)
+          PY
+      - name: Commit Loren Round 2 repair
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add prototypes/xplorer-messages/03-loren-flow-through/index.html
+          git commit -m "ux: rebuild Loren Messages prototype for Round 2"
+          git push origin HEAD:designlab-2.0
