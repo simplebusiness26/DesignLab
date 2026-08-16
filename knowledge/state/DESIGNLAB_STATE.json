@@ -27,7 +27,7 @@
   "approvedVisual": null,
   "implementation": "paused-pending-restarted-design-process",
   "challengerTournamentB": {
-    "status": "katie-locked-alex-next",
+    "status": "katie-locked-apk-delivered-alex-next",
     "tournamentFile": "knowledge/tournaments/challengers/2026-08-15-xplorer/TOURNAMENT.md",
     "sourceRepository": "simplebusiness26/The-App",
     "sourceBranchAtFreeze": "main2.0-Dev",
@@ -48,7 +48,16 @@
         "productTruthChecks": 30,
         "designLabValidationRun": 31948117155,
         "designLabValidationConclusion": "success",
-        "apkBuildRun": 31947197743
+        "latestGreenDesignLabCiBeforeDeliveryStamp": 31948519066,
+        "apkBuildRun": 31947197743,
+        "apkBuildConclusion": "success",
+        "apkArtifactName": "Xplorer-Katie-Dill-APK",
+        "apkArtifactId": 9264053184,
+        "apkArtifactArchiveBytes": 77537031,
+        "apkBytes": 175294577,
+        "apkSha256": "7442bbe15bb66584ca2594e8f4ddfcaa36f35eb31b13cf32b2b5ee19c799cec6",
+        "apkArtifactExpiresAt": "2026-09-15T13:05:03Z",
+        "designRecordArtifactId": 9264053421
       }
     },
     "sharedInputs": [
