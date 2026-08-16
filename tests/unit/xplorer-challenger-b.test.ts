@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  DESIGN_TRANSFORMATION_DIMENSIONS,
   PERFECT_10_CATEGORIES,
   XPLORER_CHALLENGERS,
   XPLORER_TOURNAMENT_B_ROUTE_COUNT,
   XPLORER_TOURNAMENT_B_SOURCE_COMMIT,
+  challengerDesignDeltaSchema,
   challengerPerfect10Schema,
   prepareXplorerChallengerPacket,
   tournamentBStatus,
@@ -38,6 +40,54 @@ describe('Xplorer Tournament B runtime', () => {
     expect(packet.executionPrompt).toContain('A single score below 5/5 blocks submission');
     expect(packet.executionPrompt).toContain(packet.sharedInputFingerprint);
     expect(packet.executionPrompt).toContain(packet.personaFingerprint);
+  });
+
+  it('prepares Alex with the mandatory creative-independence transformation gate', async () => {
+    const packet = await prepareXplorerChallengerPacket({
+      knowledgeRoot: process.cwd(),
+      challenger: 'alex-schleifer',
+    });
+
+    expect(packet.order).toBe(2);
+    expect(packet.requiredOutputs).toContain('DESIGN_DELTA.json');
+    expect(packet.transformationStandard?.path).toBe('knowledge/DESIGN_TRANSFORMATION_STANDARD.md');
+    expect(packet.transformationStandard?.sha256).toMatch(/^[0-9a-f]{64}$/);
+    expect(packet.executionPrompt).toContain('Existing Xplorer UI is NOT a template');
+    expect(packet.executionPrompt).toContain('A reskin or simplified old layout automatically fails');
+  });
+
+  it('rejects design-delta proof that is not a genuine transformation', () => {
+    const valid = challengerDesignDeltaSchema.safeParse({
+      schemaVersion: 1,
+      challenger: 'alex-schleifer',
+      sourceCommit: XPLORER_TOURNAMENT_B_SOURCE_COMMIT,
+      sameDesign: false,
+      dimensions: DESIGN_TRANSFORMATION_DIMENSIONS.map((dimension) => ({
+        dimension,
+        rating: 'major',
+        evidence: ['Concrete implementation and prototype evidence for this changed dimension.'],
+      })),
+      screenFamilies: Array.from({ length: 10 }, (_, index) => ({
+        family: `family-${index}`,
+        structuralChange: index < 8,
+        evidence: 'Documented structural re-composition beyond colour, radius or spacing changes.',
+      })),
+      paletteIndependence: 'The palette was derived from the challenger product model rather than copied from frozen Xplorer.',
+      designedFromPersonaModel: true,
+    });
+    expect(valid.success).toBe(true);
+
+    const invalid = challengerDesignDeltaSchema.safeParse({
+      schemaVersion: 1,
+      challenger: 'alex-schleifer',
+      sourceCommit: XPLORER_TOURNAMENT_B_SOURCE_COMMIT,
+      sameDesign: true,
+      dimensions: DESIGN_TRANSFORMATION_DIMENSIONS.map((dimension) => ({ dimension, rating: 'major', evidence: ['evidence evidence'] })),
+      screenFamilies: Array.from({ length: 10 }, (_, index) => ({ family: `family-${index}`, structuralChange: true, evidence: 'structural evidence' })),
+      paletteIndependence: 'This intentionally long palette explanation still cannot rescue sameDesign=true.',
+      designedFromPersonaModel: true,
+    });
+    expect(invalid.success).toBe(false);
   });
 
   it('requires every Perfect-10 category to be scored exactly 5', () => {

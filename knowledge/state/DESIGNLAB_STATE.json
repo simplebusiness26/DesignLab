@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1.3.0",
+  "schemaVersion": "1.4.0",
   "knowledgeSystem": "2.0.0",
   "branch": "designlab-2.0",
   "personas": {
@@ -98,6 +98,18 @@
     "validatedCiRun": 31946157424,
     "validatedCiConclusion": "success",
     "candidateInheritance": "forbidden",
-    "tournamentA": "untouched"
+    "tournamentA": "untouched",
+    "designTransformationStandard": "knowledge/DESIGN_TRANSFORMATION_STANDARD.md",
+    "designTransformationGate": "required-from-challenger-2",
+    "sameAppDifferentPolish": "automatic-failure",
+    "apkPipeline": "validate-transform-then-compile-in-parallel",
+    "creativeIndependence": {
+      "productTruthLocked": true,
+      "existingUiLocked": false,
+      "minimumMajorTransformationDimensions": 6,
+      "totalTransformationDimensions": 8,
+      "minimumStructurallyChangedScreenFamilies": 8,
+      "minimumScreenFamiliesReviewed": 10
+    }
   }
 }

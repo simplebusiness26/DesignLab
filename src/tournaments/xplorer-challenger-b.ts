@@ -12,6 +12,18 @@ export const XPLORER_TOURNAMENT_B_SOURCE_BRANCH = 'main2.0-Dev';
 export const XPLORER_TOURNAMENT_B_SOURCE_COMMIT = '78632b12eeb4e4123b1a767c8b815fe6617681f9';
 export const XPLORER_TOURNAMENT_B_SOURCE_TREE = 'd6aa748c66cf90ee5637e793d71feaa6b4cf399a';
 export const XPLORER_TOURNAMENT_B_ROUTE_COUNT = 76;
+export const XPLORER_DESIGN_TRANSFORMATION_STANDARD = 'knowledge/DESIGN_TRANSFORMATION_STANDARD.md';
+
+export const DESIGN_TRANSFORMATION_DIMENSIONS = [
+  'Visual identity',
+  'Navigation presentation',
+  'Page composition',
+  'Information hierarchy',
+  'Component/surface language',
+  'Interaction/state presentation',
+  'Map experience',
+  'Cross-route system coherence',
+] as const;
 
 export const XPLORER_CHALLENGERS = [
   { slug: 'katie-dill', name: 'Katie Dill', persona: 'knowledge/personas/ux/katie-dill/PERSONA_PACK.md' },
@@ -89,6 +101,30 @@ const productTruthSchema = z
       .passthrough(),
   })
   .passthrough();
+
+const designDeltaDimensionSchema = z.object({
+  dimension: z.enum(DESIGN_TRANSFORMATION_DIMENSIONS),
+  rating: z.enum(['major', 'moderate']),
+  evidence: z.array(z.string().min(12)).min(1),
+});
+
+export const challengerDesignDeltaSchema = z.object({
+  schemaVersion: z.literal(1),
+  challenger: z.enum(XPLORER_CHALLENGERS.map((item) => item.slug) as [XplorerChallengerSlug, ...XplorerChallengerSlug[]]),
+  sourceCommit: z.literal(XPLORER_TOURNAMENT_B_SOURCE_COMMIT),
+  sameDesign: z.literal(false),
+  dimensions: z.array(designDeltaDimensionSchema).length(DESIGN_TRANSFORMATION_DIMENSIONS.length),
+  screenFamilies: z.array(
+    z.object({
+      family: z.string().min(2),
+      structuralChange: z.boolean(),
+      evidence: z.string().min(12),
+    }),
+  ).min(10),
+  paletteIndependence: z.string().min(40),
+  designedFromPersonaModel: z.literal(true),
+});
+export type ChallengerDesignDelta = z.infer<typeof challengerDesignDeltaSchema>;
 
 const perfect10ScoreSchema = z.object({
   category: z.enum(PERFECT_10_CATEGORIES),
@@ -175,6 +211,7 @@ export interface ChallengerPacket {
   sharedInputs: FileFingerprint[];
   personaPath: string;
   requiredOutputs: readonly string[];
+  transformationStandard?: FileFingerprint;
   executionPrompt: string;
 }
 
@@ -356,6 +393,15 @@ export async function prepareXplorerChallengerPacket(options: PrepareChallengerO
   }
   const personaText = await readRequired(root, challenger.persona);
   const personaFingerprint = sha256(personaText);
+  const transformationText = index === 0 ? null : await readRequired(root, XPLORER_DESIGN_TRANSFORMATION_STANDARD);
+  const transformationStandard = transformationText
+    ? {
+        path: XPLORER_DESIGN_TRANSFORMATION_STANDARD,
+        sha256: sha256(transformationText),
+        bytes: Buffer.byteLength(transformationText, 'utf8'),
+      }
+    : undefined;
+  const requiredOutputs = index === 0 ? [...REQUIRED_OUTPUTS] : [...REQUIRED_OUTPUTS, 'DESIGN_DELTA.json'];
 
   const executionPrompt = [
     `You are executing Challenger ${index + 1} of ${XPLORER_CHALLENGERS.length}: ${challenger.name}.`,
@@ -377,15 +423,32 @@ export async function prepareXplorerChallengerPacket(options: PrepareChallengerO
     '8. Produce one resolved candidate, not a menu of directions.',
     '9. Run persona-specific self-review, Product Truth validation and the global Perfect-10 gate. A single score below 5/5 blocks submission.',
     '10. Do not mark RESULT.json locked until every required artifact exists and every gate genuinely passes.',
+    ...(transformationText
+      ? [
+          '11. Existing Xplorer UI is NOT a template. Product Truth is locked; the current visual/layout system is not.',
+          '12. Create the design from this persona product model first, then implement it. A reskin or simplified old layout automatically fails.',
+          '13. Prove major transformation across visual identity, navigation, composition, hierarchy, components, state presentation, map experience and cross-route coherence.',
+          '14. At least eight of the ten mandatory screen families must have structural change; at least six of eight transformation dimensions must be major.',
+          '15. Do not begin APK compilation until the Design Transformation gate passes.',
+        ]
+      : []),
     '',
     'REQUIRED OUTPUTS',
-    ...REQUIRED_OUTPUTS.map((output) => `- candidates/${challenger.slug}/${output}`),
+    ...requiredOutputs.map((output) => `- candidates/${challenger.slug}/${output}`),
     '',
     'The prototype must be a standalone mobile-friendly whole-app HTML candidate. It may simulate real data but may not add fake capabilities.',
     '',
     '===== BEGIN SELECTED PERSONA PACK =====',
     personaText.trim(),
     '===== END SELECTED PERSONA PACK =====',
+    ...(transformationText
+      ? [
+          '',
+          '===== BEGIN DESIGN TRANSFORMATION STANDARD =====',
+          transformationText.trim(),
+          '===== END DESIGN TRANSFORMATION STANDARD =====',
+        ]
+      : []),
     ...sharedSections,
     '',
     'FINAL SUBMISSION CONTRACT',
@@ -395,6 +458,12 @@ export async function prepareXplorerChallengerPacket(options: PrepareChallengerO
     '- PRODUCT_TRUTH_CHECK.json must contain at least 20 evidence-backed checks, all passed, with zero violations.',
     '- PERFECT_10.json must contain exactly the ten DesignLab categories, every score exactly 5, each with concrete evidence.',
     '- SELF_REVIEW.md must explicitly review the candidate through the selected persona reasoning, including weaknesses found and corrected.',
+    ...(transformationText
+      ? [
+          `- DESIGN_DELTA.json must use transformation standard SHA-256 ${transformationStandard?.sha256}.`,
+          '- DESIGN_DELTA.json must prove sameDesign=false, all eight dimensions changed, at least six major dimensions, ten screen families and at least eight structural changes.',
+        ]
+      : []),
     '- The candidate remains blocked until deterministic runtime validation accepts all of the above.',
   ].join('\n');
 
@@ -412,7 +481,8 @@ export async function prepareXplorerChallengerPacket(options: PrepareChallengerO
     personaFingerprint,
     sharedInputs: validation.sharedInputs,
     personaPath: challenger.persona,
-    requiredOutputs: REQUIRED_OUTPUTS,
+    requiredOutputs,
+    transformationStandard,
     executionPrompt,
   };
 
@@ -483,6 +553,7 @@ export async function validateXplorerChallengerResult(
   }
 
   const validation = await validateXplorerTournamentB(root);
+  const index = XPLORER_CHALLENGERS.findIndex((item) => item.slug === challenger.slug);
   const persona = validation.personas.find((item) => item.slug === challenger.slug);
   if (!persona) throw new DesignLabError('STATE_CORRUPT', `Persona fingerprint missing for ${challenger.slug}.`);
 
@@ -490,6 +561,46 @@ export async function validateXplorerChallengerResult(
   await assertSubstantialFile(join(dir, 'prototype', 'index.html'), 'whole-app prototype', 1_000);
   await assertSubstantialFile(join(dir, 'DESIGN_THESIS.md'), 'design thesis', 150);
   await assertSubstantialFile(join(dir, 'SELF_REVIEW.md'), 'persona self-review', 300);
+
+  if (index > 0) {
+    await assertSubstantialFile(join(dir, 'DESIGN_DELTA.json'), 'design transformation proof', 500);
+    const deltaParsed = challengerDesignDeltaSchema.safeParse(
+      await readJsonFile(join(dir, 'DESIGN_DELTA.json'), 'DESIGN_DELTA.json'),
+    );
+    if (!deltaParsed.success) {
+      throw new DesignLabError('STATE_CORRUPT', 'DESIGN_DELTA.json did not pass the Design Transformation schema.', {
+        details: { issues: deltaParsed.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`) },
+      });
+    }
+    if (deltaParsed.data.challenger !== challenger.slug) {
+      throw new DesignLabError('STATE_CORRUPT', 'DESIGN_DELTA.json belongs to a different challenger.');
+    }
+    const dimensionNames = deltaParsed.data.dimensions.map((item) => item.dimension);
+    if (new Set(dimensionNames).size !== DESIGN_TRANSFORMATION_DIMENSIONS.length) {
+      throw new DesignLabError('STATE_CORRUPT', 'DESIGN_DELTA.json repeats or omits a transformation dimension.');
+    }
+    for (const dimension of DESIGN_TRANSFORMATION_DIMENSIONS) {
+      if (!dimensionNames.includes(dimension)) {
+        throw new DesignLabError('STATE_CORRUPT', `DESIGN_DELTA.json is missing transformation dimension: ${dimension}`);
+      }
+    }
+    const majorDimensions = deltaParsed.data.dimensions.filter((item) => item.rating === 'major').length;
+    if (majorDimensions < 6) {
+      throw new DesignLabError('STATE_CORRUPT', 'Design Transformation gate requires at least six major dimensions.', {
+        details: { majorDimensions, required: 6 },
+      });
+    }
+    const familyNames = deltaParsed.data.screenFamilies.map((item) => item.family.toLowerCase());
+    if (new Set(familyNames).size !== familyNames.length) {
+      throw new DesignLabError('STATE_CORRUPT', 'DESIGN_DELTA.json contains duplicate screen families.');
+    }
+    const structuralFamilies = deltaParsed.data.screenFamilies.filter((item) => item.structuralChange).length;
+    if (structuralFamilies < 8) {
+      throw new DesignLabError('STATE_CORRUPT', 'Design Transformation gate requires at least eight structurally changed screen families.', {
+        details: { structuralFamilies, required: 8 },
+      });
+    }
+  }
 
   const resultParsed = challengerResultSchema.safeParse(await readJsonFile(join(dir, 'RESULT.json'), 'RESULT.json'));
   if (!resultParsed.success) {

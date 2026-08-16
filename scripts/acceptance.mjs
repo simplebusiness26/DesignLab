@@ -235,6 +235,10 @@ async function main() {
     const alexProgress = await run([...base, 'prepare', 'alex-schleifer', '--json']);
     if (katieLocked) {
       check('Alex can start after Katie is locked', alexProgress.code === 0);
+      const alex = await runJson([...base, 'prepare', 'alex-schleifer']);
+      check('Alex packet requires Design Transformation proof', alex.data?.requiredOutputs?.includes('DESIGN_DELTA.json'));
+      check('Alex packet loads the creative-independence standard', alex.data?.transformationStandard?.path === 'knowledge/DESIGN_TRANSFORMATION_STANDARD.md');
+      check('Alex transformation standard has a stable fingerprint', /^[0-9a-f]{64}$/.test(alex.data?.transformationStandard?.sha256 ?? ''));
     } else {
       check('Alex cannot start before Katie is locked', alexProgress.code !== 0 && alexProgress.stderr.includes('must be fully locked'));
     }
