@@ -12,6 +12,7 @@ export const XPLORER_TOURNAMENT_B_SOURCE_BRANCH = 'main2.0-Dev';
 export const XPLORER_TOURNAMENT_B_SOURCE_COMMIT = '78632b12eeb4e4123b1a767c8b815fe6617681f9';
 export const XPLORER_TOURNAMENT_B_SOURCE_TREE = 'd6aa748c66cf90ee5637e793d71feaa6b4cf399a';
 export const XPLORER_TOURNAMENT_B_ROUTE_COUNT = 76;
+export const XPLORER_TOURNAMENT_B_CONTRACT_REVISION = '2.0-capability-first';
 export const XPLORER_DESIGN_TRANSFORMATION_STANDARD = 'knowledge/DESIGN_TRANSFORMATION_STANDARD.md';
 
 export const DESIGN_TRANSFORMATION_DIMENSIONS = [
@@ -38,6 +39,7 @@ export const XPLORER_CHALLENGERS = [
 export type XplorerChallengerSlug = (typeof XPLORER_CHALLENGERS)[number]['slug'];
 
 export const XPLORER_TOURNAMENT_B_SHARED_INPUTS = [
+  'knowledge/tournaments/challengers/2026-08-15-xplorer/PRODUCT_TRUTH_V2_CONTRACT.md',
   'knowledge/tournaments/challengers/2026-08-15-xplorer/TOURNAMENT.md',
   'knowledge/tournaments/challengers/2026-08-15-xplorer/MASTER_PRODUCT_BRIEF.md',
   'knowledge/tournaments/challengers/2026-08-15-xplorer/PRODUCT_TRUTH_ANNEX.md',
@@ -69,13 +71,40 @@ const sourceTruthSchema = z.object({
 
 const productTruthSchema = z
   .object({
-    schema_version: z.string().min(1),
+    schema_version: z.literal('2.0'),
+    contract_revision: z.literal(XPLORER_TOURNAMENT_B_CONTRACT_REVISION),
     status: z.literal('locked_shared_input'),
     product: z.literal('Xplorer'),
     tournament: z.literal('Xplorer Challenger Tournament B'),
     source: sourceTruthSchema,
-    verification: z.object({ declared_route_count: z.literal(XPLORER_TOURNAMENT_B_ROUTE_COUNT) }).passthrough(),
+    contract_model: z
+      .object({
+        principle: z.string().min(20),
+        immutable_product_truth: z.array(z.string()).min(5),
+        required_functional_outcomes: z.array(z.string()).min(5),
+        designer_owned_implementation: z.array(z.string()).min(8),
+      })
+      .passthrough(),
+    verification: z
+      .object({
+        declared_route_count: z.literal(XPLORER_TOURNAMENT_B_ROUTE_COUNT),
+        regression_gate_policy: z
+          .object({
+            classification_required_before_forcing_redesign: z.literal(true),
+            replacement_test_required_for_retired_implementation_assertion: z.literal(true),
+          })
+          .passthrough(),
+      })
+      .passthrough(),
     routes: z.array(z.string()).length(XPLORER_TOURNAMENT_B_ROUTE_COUNT),
+    route_policy: z
+      .object({
+        all_material_capabilities_must_survive: z.literal(true),
+        one_screen_per_route_required: z.literal(false),
+        current_route_grouping_required: z.literal(false),
+        designer_may_combine_regroup_or_nest: z.literal(true),
+      })
+      .passthrough(),
     identity: z
       .object({
         universal_identity: z.literal('Explorer'),
@@ -90,6 +119,7 @@ const productTruthSchema = z
         memory_starts_at_camera: z.literal(true),
         display_surfaces_may_bypass_camera: z.literal(false),
         generic_create_hub_present: z.literal(false),
+        camera_entry_ui_is_designer_owned: z.literal(true),
       })
       .passthrough(),
     presence: z
@@ -143,7 +173,8 @@ export const challengerPerfect10Schema = z.object({
 export type ChallengerPerfect10 = z.infer<typeof challengerPerfect10Schema>;
 
 export const challengerProductTruthCheckSchema = z.object({
-  schemaVersion: z.literal(1),
+  schemaVersion: z.literal(2),
+  contractRevision: z.literal(XPLORER_TOURNAMENT_B_CONTRACT_REVISION),
   challenger: z.enum(XPLORER_CHALLENGERS.map((item) => item.slug) as [XplorerChallengerSlug, ...XplorerChallengerSlug[]]),
   sourceCommit: z.literal(XPLORER_TOURNAMENT_B_SOURCE_COMMIT),
   checks: z
@@ -155,6 +186,16 @@ export const challengerProductTruthCheckSchema = z.object({
       }),
     )
     .min(20),
+  migratedImplementationAssertions: z
+    .array(
+      z.object({
+        oldAssertion: z.string().min(8),
+        protectedOutcome: z.string().min(8),
+        replacementVerification: z.string().min(8),
+        passed: z.literal(true),
+      }),
+    )
+    .default([]),
   violations: z.array(z.never()).length(0),
   passed: z.literal(true),
   checkedAt: z.string().datetime({ offset: true }).or(z.string().datetime()),
@@ -162,7 +203,8 @@ export const challengerProductTruthCheckSchema = z.object({
 export type ChallengerProductTruthCheck = z.infer<typeof challengerProductTruthCheckSchema>;
 
 export const challengerResultSchema = z.object({
-  schemaVersion: z.literal(1),
+  schemaVersion: z.literal(2),
+  contractRevision: z.literal(XPLORER_TOURNAMENT_B_CONTRACT_REVISION),
   status: z.literal('locked'),
   challenger: z.enum(XPLORER_CHALLENGERS.map((item) => item.slug) as [XplorerChallengerSlug, ...XplorerChallengerSlug[]]),
   sourceRepository: z.literal(XPLORER_TOURNAMENT_B_SOURCE_REPOSITORY),
@@ -190,6 +232,7 @@ export interface TournamentBValidation {
   root: string;
   sourceCommit: string;
   sourceTree: string;
+  contractRevision: typeof XPLORER_TOURNAMENT_B_CONTRACT_REVISION;
   routeCount: number;
   sharedInputs: FileFingerprint[];
   sharedInputFingerprint: string;
@@ -197,7 +240,8 @@ export interface TournamentBValidation {
 }
 
 export interface ChallengerPacket {
-  schemaVersion: 1;
+  schemaVersion: 2;
+  contractRevision: typeof XPLORER_TOURNAMENT_B_CONTRACT_REVISION;
   tournament: 'Xplorer Challenger Tournament B';
   challenger: XplorerChallengerSlug;
   challengerName: string;
@@ -267,6 +311,15 @@ async function readRequired(root: string, relativePath: string): Promise<string>
   return text;
 }
 
+async function fileExists(path: string): Promise<boolean> {
+  try {
+    const info = await stat(path);
+    return info.isFile();
+  } catch {
+    return false;
+  }
+}
+
 function sha256(text: string): string {
   return createHash('sha256').update(text).digest('hex');
 }
@@ -276,7 +329,7 @@ function combinedFingerprint(files: readonly FileFingerprint[]): string {
     .sort((a, b) => a.path.localeCompare(b.path))
     .map((file) => `${file.path}\0${file.sha256}\0${file.bytes}`)
     .join('\n');
-  return sha256(`${XPLORER_TOURNAMENT_B_SOURCE_COMMIT}\n${canonical}`);
+  return sha256(`${XPLORER_TOURNAMENT_B_SOURCE_COMMIT}\n${XPLORER_TOURNAMENT_B_CONTRACT_REVISION}\n${canonical}`);
 }
 
 async function fingerprintFile(root: string, relativePath: string): Promise<FileFingerprint> {
@@ -303,7 +356,7 @@ export async function validateXplorerTournamentB(knowledgeRoot: string): Promise
   }
   const truth = productTruthSchema.safeParse(parsedTruth);
   if (!truth.success) {
-    throw new DesignLabError('STATE_CORRUPT', 'Tournament B PRODUCT_TRUTH.json does not match the locked source contract.', {
+    throw new DesignLabError('STATE_CORRUPT', 'Tournament B PRODUCT_TRUTH.json does not match the locked V2 source contract.', {
       details: { issues: truth.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`) },
     });
   }
@@ -336,6 +389,7 @@ export async function validateXplorerTournamentB(knowledgeRoot: string): Promise
     root,
     sourceCommit: XPLORER_TOURNAMENT_B_SOURCE_COMMIT,
     sourceTree: XPLORER_TOURNAMENT_B_SOURCE_TREE,
+    contractRevision: XPLORER_TOURNAMENT_B_CONTRACT_REVISION,
     routeCount: truth.data.routes.length,
     sharedInputs,
     sharedInputFingerprint: combinedFingerprint(sharedInputs),
@@ -365,8 +419,8 @@ async function assertPreviousChallengersLocked(root: string, index: number): Pro
     await validateXplorerChallengerResult({ knowledgeRoot: root, challenger: challenger.slug }).catch((error: unknown) => {
       throw new DesignLabError(
         'CANDIDATE_NOT_FOUND',
-        `Tournament B is sequential: ${challenger.name} must be fully locked before the next challenger starts.`,
-        { cause: error, details: { requiredPreviousChallenger: challenger.slug } },
+        `Tournament B is sequential under Product Truth V2: ${challenger.name} must be reviewed and locked under ${XPLORER_TOURNAMENT_B_CONTRACT_REVISION} before the next challenger starts.`,
+        { cause: error, details: { requiredPreviousChallenger: challenger.slug, contractRevision: XPLORER_TOURNAMENT_B_CONTRACT_REVISION } },
       );
     });
   }
@@ -406,7 +460,8 @@ export async function prepareXplorerChallengerPacket(options: PrepareChallengerO
   const executionPrompt = [
     `You are executing Challenger ${index + 1} of ${XPLORER_CHALLENGERS.length}: ${challenger.name}.`,
     '',
-    'This is Xplorer Challenger Tournament B. The shared Product Truth is frozen. The persona is the only intended variable.',
+    `This is Xplorer Challenger Tournament B under Product Truth contract ${XPLORER_TOURNAMENT_B_CONTRACT_REVISION}.`,
+    'The frozen product is shared; the persona is the intended creative variable.',
     `Source repository: ${XPLORER_TOURNAMENT_B_SOURCE_REPOSITORY}`,
     `Frozen branch at capture: ${XPLORER_TOURNAMENT_B_SOURCE_BRANCH}`,
     `Frozen source commit: ${XPLORER_TOURNAMENT_B_SOURCE_COMMIT}`,
@@ -414,22 +469,24 @@ export async function prepareXplorerChallengerPacket(options: PrepareChallengerO
     '',
     'NON-NEGOTIABLE EXECUTION RULES',
     '1. Work only from the frozen Xplorer source commit. Do not use the moving branch head.',
-    '2. Use the complete shared Product Truth package below. Where it conflicts with frozen source, frozen source wins.',
-    `3. Load ONLY ${challenger.name}'s persona pack. Do not inspect, mention or borrow another challenger.` ,
-    '4. Inspect the actual Xplorer source relevant to this persona before making design decisions.',
+    '2. Use the complete Product Truth V2 package below. Frozen source wins for product/data/capability facts, not merely because the old UI implements a particular pattern.',
+    `3. Load ONLY ${challenger.name}'s persona pack. Do not inspect, mention or borrow another challenger.`,
+    '4. Inspect the actual frozen Xplorer source to understand capabilities, data, lifecycles and constraints before making design decisions.',
     '5. Redesign the whole product as one coherent Xplorer. Do not produce showcase screens only.',
-    '6. You may reorganise navigation and information architecture, but may not invent product behaviour or weaken privacy, permission or ownership rules.',
-    '7. Follow the anti-imitation standard. Apply professional reasoning; do not copy trade dress or famous product screens.',
-    '8. Produce one resolved candidate, not a menu of directions.',
-    '9. Run persona-specific self-review, Product Truth validation and the global Perfect-10 gate. A single score below 5/5 blocks submission.',
-    '10. Do not mark RESULT.json locked until every required artifact exists and every gate genuinely passes.',
+    '6. Navigation, headers, screen grouping, control placement, gestures, composition and interaction architecture are persona-owned unless a change loses Product Truth or a required outcome.',
+    '7. When a legacy test fails, classify it before changing the design. If it only asserts old UI implementation, replace it with outcome-level verification and document that migration; do not force the frozen UI back merely to make the old assertion green.',
+    '8. You may not invent product behaviour or weaken privacy, permission, ownership, safety or data rules.',
+    '9. Follow the anti-imitation standard. Apply professional reasoning; do not copy trade dress or famous product screens.',
+    '10. Produce one resolved candidate, not a menu of directions.',
+    '11. Run persona-specific self-review, Capability Truth, Outcome Journey, Runtime and Perfect-10 validation. A genuine blocker must be fixed before submission.',
+    '12. Do not mark RESULT.json locked until every required artifact exists and every genuine gate passes.',
     ...(transformationText
       ? [
-          '11. Existing Xplorer UI is NOT a template. Product Truth is locked; the current visual/layout system is not.',
-          '12. Create the design from this persona product model first, then implement it. A reskin or simplified old layout automatically fails.',
-          '13. Prove major transformation across visual identity, navigation, composition, hierarchy, components, state presentation, map experience and cross-route coherence.',
-          '14. At least eight of the ten mandatory screen families must have structural change; at least six of eight transformation dimensions must be major.',
-          '15. Do not begin APK compilation until the Design Transformation gate passes.',
+          '13. Existing Xplorer UI is NOT a template. Product Truth is locked; the current visual/layout/interaction system is not.',
+          '14. Create the design from this persona product model first, then implement it. A reskin or simplified old layout automatically fails.',
+          '15. Prove major transformation across visual identity, navigation, composition, hierarchy, components, state presentation, map experience and cross-route coherence.',
+          '16. At least eight of the ten mandatory screen families must have structural change; at least six of eight transformation dimensions must be major.',
+          '17. Do not begin APK compilation until the Design Transformation gate passes.',
         ]
       : []),
     '',
@@ -452,10 +509,13 @@ export async function prepareXplorerChallengerPacket(options: PrepareChallengerO
     ...sharedSections,
     '',
     'FINAL SUBMISSION CONTRACT',
+    `- RESULT.json schemaVersion must be 2 and contractRevision must be "${XPLORER_TOURNAMENT_B_CONTRACT_REVISION}".`,
     `- RESULT.json challenger must be "${challenger.slug}" and sourceCommit must be ${XPLORER_TOURNAMENT_B_SOURCE_COMMIT}.`,
     `- RESULT.json sharedInputFingerprint must be ${validation.sharedInputFingerprint}.`,
     `- RESULT.json personaFingerprint must be ${personaFingerprint}.`,
+    `- PRODUCT_TRUTH_CHECK.json schemaVersion must be 2 and contractRevision must be "${XPLORER_TOURNAMENT_B_CONTRACT_REVISION}".`,
     '- PRODUCT_TRUTH_CHECK.json must contain at least 20 evidence-backed checks, all passed, with zero violations.',
+    '- Any retired legacy implementation assertion must be listed in migratedImplementationAssertions with its protected outcome and replacement verification.',
     '- PERFECT_10.json must contain exactly the ten DesignLab categories, every score exactly 5, each with concrete evidence.',
     '- SELF_REVIEW.md must explicitly review the candidate through the selected persona reasoning, including weaknesses found and corrected.',
     ...(transformationText
@@ -464,11 +524,12 @@ export async function prepareXplorerChallengerPacket(options: PrepareChallengerO
           '- DESIGN_DELTA.json must prove sameDesign=false, all eight dimensions changed, at least six major dimensions, ten screen families and at least eight structural changes.',
         ]
       : []),
-    '- The candidate remains blocked until deterministic runtime validation accepts all of the above.',
+    '- The candidate remains blocked until deterministic runtime validation accepts all genuine Product Truth V2 requirements.',
   ].join('\n');
 
   const packet: ChallengerPacket = {
-    schemaVersion: 1,
+    schemaVersion: 2,
+    contractRevision: XPLORER_TOURNAMENT_B_CONTRACT_REVISION,
     tournament: 'Xplorer Challenger Tournament B',
     challenger: challenger.slug,
     challengerName: challenger.name,
@@ -604,7 +665,7 @@ export async function validateXplorerChallengerResult(
 
   const resultParsed = challengerResultSchema.safeParse(await readJsonFile(join(dir, 'RESULT.json'), 'RESULT.json'));
   if (!resultParsed.success) {
-    throw new DesignLabError('STATE_CORRUPT', 'RESULT.json does not match the Tournament B lock schema.', {
+    throw new DesignLabError('STATE_CORRUPT', 'RESULT.json does not match the Tournament B V2 lock schema.', {
       details: { issues: resultParsed.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`) },
     });
   }
@@ -640,7 +701,7 @@ export async function validateXplorerChallengerResult(
     await readJsonFile(join(dir, 'PRODUCT_TRUTH_CHECK.json'), 'PRODUCT_TRUTH_CHECK.json'),
   );
   if (!truthParsed.success) {
-    throw new DesignLabError('STATE_CORRUPT', 'PRODUCT_TRUTH_CHECK.json did not pass the Tournament B truth gate.', {
+    throw new DesignLabError('STATE_CORRUPT', 'PRODUCT_TRUTH_CHECK.json did not pass the Tournament B V2 truth gate.', {
       details: { issues: truthParsed.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`) },
     });
   }
@@ -661,17 +722,21 @@ export async function validateXplorerChallengerResult(
 
 export async function tournamentBStatus(knowledgeRoot: string): Promise<{
   sourceCommit: string;
+  contractRevision: typeof XPLORER_TOURNAMENT_B_CONTRACT_REVISION;
   sharedInputFingerprint: string;
-  challengers: Array<{ slug: XplorerChallengerSlug; name: string; order: number; status: 'locked' | 'next' | 'blocked' }>;
+  challengers: Array<{
+    slug: XplorerChallengerSlug;
+    name: string;
+    order: number;
+    status: 'locked' | 'pre-v2' | 'next' | 'blocked';
+  }>;
 }> {
   const root = resolve(knowledgeRoot);
   const validation = await validateXplorerTournamentB(root);
-  const statuses: Array<{ slug: XplorerChallengerSlug; name: string; order: number; status: 'locked' | 'next' | 'blocked' }> = [];
-  let foundUnlocked = false;
+  const currentLocks = new Map<XplorerChallengerSlug, boolean>();
+  const preV2 = new Map<XplorerChallengerSlug, boolean>();
 
-  for (let index = 0; index < XPLORER_CHALLENGERS.length; index += 1) {
-    const challenger = XPLORER_CHALLENGERS[index];
-    if (!challenger) continue;
+  for (const challenger of XPLORER_CHALLENGERS) {
     let locked = false;
     try {
       await validateXplorerChallengerResult({ knowledgeRoot: root, challenger: challenger.slug });
@@ -679,18 +744,49 @@ export async function tournamentBStatus(knowledgeRoot: string): Promise<{
     } catch {
       locked = false;
     }
-    if (locked && !foundUnlocked) {
+    currentLocks.set(challenger.slug, locked);
+    preV2.set(
+      challenger.slug,
+      !locked && (await fileExists(join(candidateDir(root, challenger.slug), 'RESULT.json')),
+    );
+  }
+
+  const statuses: Array<{
+    slug: XplorerChallengerSlug;
+    name: string;
+    order: number;
+    status: 'locked' | 'pre-v2' | 'next' | 'blocked';
+  }> = [];
+  let unresolvedPrior = false;
+  let nextAssigned = false;
+
+  for (let index = 0; index < XPLORER_CHALLENGERS.length; index += 1) {
+    const challenger = XPLORER_CHALLENGERS[index];
+    if (!challenger) continue;
+    const locked = currentLocks.get(challenger.slug) === true;
+    const legacy = preV2.get(challenger.slug) === true;
+
+    if (locked && !unresolvedPrior) {
       statuses.push({ slug: challenger.slug, name: challenger.name, order: index + 1, status: 'locked' });
-    } else if (!foundUnlocked) {
-      foundUnlocked = true;
-      statuses.push({ slug: challenger.slug, name: challenger.name, order: index + 1, status: 'next' });
-    } else {
-      statuses.push({ slug: challenger.slug, name: challenger.name, order: index + 1, status: 'blocked' });
+      continue;
     }
+    if (legacy) {
+      unresolvedPrior = true;
+      statuses.push({ slug: challenger.slug, name: challenger.name, order: index + 1, status: 'pre-v2' });
+      continue;
+    }
+    if (!unresolvedPrior && !nextAssigned) {
+      nextAssigned = true;
+      unresolvedPrior = true;
+      statuses.push({ slug: challenger.slug, name: challenger.name, order: index + 1, status: 'next' });
+      continue;
+    }
+    statuses.push({ slug: challenger.slug, name: challenger.name, order: index + 1, status: 'blocked' });
   }
 
   return {
     sourceCommit: XPLORER_TOURNAMENT_B_SOURCE_COMMIT,
+    contractRevision: XPLORER_TOURNAMENT_B_CONTRACT_REVISION,
     sharedInputFingerprint: validation.sharedInputFingerprint,
     challengers: statuses,
   };
