@@ -210,9 +210,17 @@ async function main() {
 
     const status = await runJson([...base, 'status']);
     check('Tournament B status command succeeds', status.code === 0 && status.data !== null);
-    const next = (status.data?.challengers ?? []).filter((item) => item.status === 'next');
-    check('Katie is the only next challenger before any result is locked', next.length === 1 && next[0]?.slug === 'katie-dill');
-    check('later challengers are blocked', (status.data?.challengers ?? []).slice(1).every((item) => item.status === 'blocked'));
+    const challengers = status.data?.challengers ?? [];
+    const next = challengers.filter((item) => item.status === 'next');
+    const katieLocked = challengers.find((item) => item.slug === 'katie-dill')?.status === 'locked';
+    if (katieLocked) {
+      check('Katie remains locked once her validated result exists', challengers.find((item) => item.slug === 'katie-dill')?.status === 'locked');
+      check('Alex is the only next challenger after Katie locks', next.length === 1 && next[0]?.slug === 'alex-schleifer');
+      check('challengers after Alex remain blocked', challengers.slice(2).every((item) => item.status === 'blocked'));
+    } else {
+      check('Katie is the only next challenger before any result is locked', next.length === 1 && next[0]?.slug === 'katie-dill');
+      check('later challengers are blocked', challengers.slice(1).every((item) => item.status === 'blocked'));
+    }
 
     const katie = await runJson([...base, 'prepare', 'katie-dill']);
     check('Katie packet prepares without a model backend', katie.code === 0 && katie.data !== null);
@@ -224,8 +232,12 @@ async function main() {
       katie.data?.requiredOutputs?.includes('PRODUCT_TRUTH_CHECK.json') &&
       katie.data?.requiredOutputs?.includes('PERFECT_10.json'));
 
-    const alexEarly = await run([...base, 'prepare', 'alex-schleifer', '--json']);
-    check('Alex cannot start before Katie is locked', alexEarly.code !== 0 && alexEarly.stderr.includes('must be fully locked'));
+    const alexProgress = await run([...base, 'prepare', 'alex-schleifer', '--json']);
+    if (katieLocked) {
+      check('Alex can start after Katie is locked', alexProgress.code === 0);
+    } else {
+      check('Alex cannot start before Katie is locked', alexProgress.code !== 0 && alexProgress.stderr.includes('must be fully locked'));
+    }
   }
 
   // -----------------------------------------------------------------------
