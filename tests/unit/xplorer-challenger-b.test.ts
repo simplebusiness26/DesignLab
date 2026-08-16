@@ -68,12 +68,23 @@ describe('Xplorer Tournament B runtime', () => {
     expect(invalid.success).toBe(false);
   });
 
-  it('marks only the first unfinished challenger as next', async () => {
+  it('keeps tournament status strictly sequential as candidates become locked', async () => {
     const result = await tournamentBStatus(process.cwd());
-    const next = result.challengers.filter((challenger) => challenger.status === 'next');
+    const statuses = result.challengers.map((challenger) => challenger.status);
+    const nextIndexes = statuses
+      .map((status, index) => (status === 'next' ? index : -1))
+      .filter((index) => index >= 0);
 
-    expect(next).toHaveLength(1);
-    expect(next[0]?.slug).toBe('katie-dill');
-    expect(result.challengers.slice(1).every((challenger) => challenger.status === 'blocked')).toBe(true);
+    expect(nextIndexes.length).toBeLessThanOrEqual(1);
+
+    const firstNonLocked = statuses.findIndex((status) => status !== 'locked');
+    if (firstNonLocked === -1) {
+      expect(statuses.every((status) => status === 'locked')).toBe(true);
+      return;
+    }
+
+    expect(statuses[firstNonLocked]).toBe('next');
+    expect(statuses.slice(0, firstNonLocked).every((status) => status === 'locked')).toBe(true);
+    expect(statuses.slice(firstNonLocked + 1).every((status) => status === 'blocked')).toBe(true);
   });
 });
