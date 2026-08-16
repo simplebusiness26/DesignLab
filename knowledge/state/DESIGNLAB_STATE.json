@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1.1.0",
+  "schemaVersion": "1.2.0",
   "knowledgeSystem": "2.0.0",
   "branch": "designlab-2.0",
   "personas": {
@@ -27,15 +27,18 @@
   "approvedVisual": null,
   "implementation": "paused-pending-restarted-design-process",
   "challengerTournamentB": {
-    "status": "product-truth-locked-runtime-wiring-required",
+    "status": "ready-for-first-challenger",
     "tournamentFile": "knowledge/tournaments/challengers/2026-08-15-xplorer/TOURNAMENT.md",
     "sourceRepository": "simplebusiness26/The-App",
     "sourceBranchAtFreeze": "main2.0-Dev",
     "sourceCommit": "78632b12eeb4e4123b1a767c8b815fe6617681f9",
     "sourceTree": "d6aa748c66cf90ee5637e793d71feaa6b4cf399a",
     "execution": "sequential-independent-same-base",
+    "executionEngine": "chatgpt-orchestrated-model-agnostic-challenger-packets",
+    "genericRoundForTournamentB": "forbidden",
     "nextChallenger": "katie-dill",
     "sharedInputs": [
+      "knowledge/tournaments/challengers/2026-08-15-xplorer/TOURNAMENT.md",
       "knowledge/tournaments/challengers/2026-08-15-xplorer/MASTER_PRODUCT_BRIEF.md",
       "knowledge/tournaments/challengers/2026-08-15-xplorer/PRODUCT_TRUTH_ANNEX.md",
       "knowledge/tournaments/challengers/2026-08-15-xplorer/PRODUCT_TRUTH.json",
@@ -52,7 +55,25 @@
       "talia-cotton",
       "emil-kowalski"
     ],
-    "runtimeWiring": "required-before-first-candidate",
+    "runtimeWiring": "complete-model-agnostic",
+    "runtimeCommands": [
+      "designlab challenger validate",
+      "designlab challenger status",
+      "designlab challenger prepare <challenger>",
+      "designlab challenger verify <challenger>"
+    ],
+    "acceptanceContract": {
+      "sharedInputsFingerprintRequired": true,
+      "personaFingerprintRequired": true,
+      "minimumProductTruthChecks": 20,
+      "perfect10Categories": 10,
+      "perfect10RequiredScoreEach": 5,
+      "wholeAppPrototypeRequired": true,
+      "previousChallengerMustBeLocked": true
+    },
+    "runtimeImplementationValidatedAtCommit": "2c2e43a5bef2d798b9610a92e1df4c15516a06c1",
+    "validatedCiRun": 31946157424,
+    "validatedCiConclusion": "success",
     "candidateInheritance": "forbidden",
     "tournamentA": "untouched"
   }
