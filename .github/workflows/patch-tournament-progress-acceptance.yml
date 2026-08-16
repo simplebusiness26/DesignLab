@@ -6,6 +6,7 @@ on:
       - designlab-2.0
     paths:
       - '.github/workflows/patch-tournament-progress-acceptance.yml'
+      - 'scripts/patch-acceptance-progression.mjs'
 
 permissions:
   contents: write
@@ -19,66 +20,7 @@ jobs:
           ref: designlab-2.0
           fetch-depth: 0
       - name: Make Tournament B acceptance state-aware
-        shell: bash
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          p=Path('scripts/acceptance.mjs')
-          s=p.read_text()
-          old="""    const status = await runJson([...base, 'status']);
-    check('Tournament B status command succeeds', status.code === 0 && status.data !== null);
-    const next = (status.data?.challengers ?? []).filter((item) => item.status === 'next');
-    check('Katie is the only next challenger before any result is locked', next.length === 1 && next[0]?.slug === 'katie-dill');
-    check('later challengers are blocked', (status.data?.challengers ?? []).slice(1).every((item) => item.status === 'blocked'));
-
-    const katie = await runJson([...base, 'prepare', 'katie-dill']);
-    check('Katie packet prepares without a model backend', katie.code === 0 && katie.data !== null);
-    check('Katie is challenger 1', katie.data?.order === 1);
-    check('Katie packet is frozen to the same Xplorer SHA', katie.data?.sourceCommit === FROZEN_XPLORER);
-    check('Katie packet loads only her persona path', katie.data?.personaPath?.endsWith('/katie-dill/PERSONA_PACK.md'));
-    check('packet requires whole-app prototype', katie.data?.requiredOutputs?.includes('prototype/index.html'));
-    check('packet requires Product Truth and Perfect-10 proof',
-      katie.data?.requiredOutputs?.includes('PRODUCT_TRUTH_CHECK.json') &&
-      katie.data?.requiredOutputs?.includes('PERFECT_10.json'));
-
-    const alexEarly = await run([...base, 'prepare', 'alex-schleifer', '--json']);
-    check('Alex cannot start before Katie is locked', alexEarly.code !== 0 && alexEarly.stderr.includes('must be fully locked'));
-"""
-          new="""    const status = await runJson([...base, 'status']);
-    check('Tournament B status command succeeds', status.code === 0 && status.data !== null);
-    const challengers = status.data?.challengers ?? [];
-    const next = challengers.filter((item) => item.status === 'next');
-    const katieLocked = challengers.find((item) => item.slug === 'katie-dill')?.status === 'locked';
-    if (katieLocked) {
-      check('Katie remains locked once her validated result exists', challengers.find((item) => item.slug === 'katie-dill')?.status === 'locked');
-      check('Alex is the only next challenger after Katie locks', next.length === 1 && next[0]?.slug === 'alex-schleifer');
-      check('challengers after Alex remain blocked', challengers.slice(2).every((item) => item.status === 'blocked'));
-    } else {
-      check('Katie is the only next challenger before any result is locked', next.length === 1 && next[0]?.slug === 'katie-dill');
-      check('later challengers are blocked', challengers.slice(1).every((item) => item.status === 'blocked'));
-    }
-
-    const katie = await runJson([...base, 'prepare', 'katie-dill']);
-    check('Katie packet prepares without a model backend', katie.code === 0 && katie.data !== null);
-    check('Katie is challenger 1', katie.data?.order === 1);
-    check('Katie packet is frozen to the same Xplorer SHA', katie.data?.sourceCommit === FROZEN_XPLORER);
-    check('Katie packet loads only her persona path', katie.data?.personaPath?.endsWith('/katie-dill/PERSONA_PACK.md'));
-    check('packet requires whole-app prototype', katie.data?.requiredOutputs?.includes('prototype/index.html'));
-    check('packet requires Product Truth and Perfect-10 proof',
-      katie.data?.requiredOutputs?.includes('PRODUCT_TRUTH_CHECK.json') &&
-      katie.data?.requiredOutputs?.includes('PERFECT_10.json'));
-
-    const alexProgress = await run([...base, 'prepare', 'alex-schleifer', '--json']);
-    if (katieLocked) {
-      check('Alex can start after Katie is locked', alexProgress.code === 0);
-    } else {
-      check('Alex cannot start before Katie is locked', alexProgress.code !== 0 && alexProgress.stderr.includes('must be fully locked'));
-    }
-"""
-          if old not in s:
-              raise SystemExit('Expected Tournament B acceptance block not found')
-          p.write_text(s.replace(old,new))
-          PY
+        run: node scripts/patch-acceptance-progression.mjs
       - name: Commit acceptance progression fix
         shell: bash
         run: |
@@ -86,5 +28,9 @@ jobs:
           git config user.name "DesignLab CI"
           git config user.email "ci@designlab.local"
           git add scripts/acceptance.mjs
-          git commit -m "Make Tournament B acceptance progression-aware"
-          git push origin HEAD:designlab-2.0
+          if git diff --cached --quiet; then
+            echo "Acceptance progression already patched."
+          else
+            git commit -m "Make Tournament B acceptance progression-aware"
+            git push origin HEAD:designlab-2.0
+          fi
