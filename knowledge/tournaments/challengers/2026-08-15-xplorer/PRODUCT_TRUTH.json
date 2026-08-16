@@ -1,0 +1,188 @@
+{
+  "schema_version": "1.0",
+  "status": "locked_shared_input",
+  "product": "Xplorer",
+  "tournament": "Xplorer Challenger Tournament B",
+  "source": {
+    "repository": "simplebusiness26/The-App",
+    "branch_at_freeze": "main2.0-Dev",
+    "commit": "78632b12eeb4e4123b1a767c8b815fe6617681f9",
+    "tree": "d6aa748c66cf90ee5637e793d71feaa6b4cf399a"
+  },
+  "verification": {
+    "route_manifest_source": "app/_layout.js",
+    "declared_route_count": 76,
+    "recorded_upstream_run": {
+      "tests": 926,
+      "suites": 67,
+      "screen_gates_exit": 0,
+      "independently_rerun_during_annex_generation": false
+    },
+    "truth_precedence": [
+      "frozen source code",
+      "frozen Supabase migrations/database rules",
+      "frozen deterministic verification gates/tests",
+      "current RULES.md and CLAUDE.md where consistent with code",
+      "MASTER_PRODUCT_BRIEF.md and PRODUCT_TRUTH_ANNEX.md",
+      "screen inventory where current",
+      "older plans/archives"
+    ]
+  },
+  "identity": {
+    "universal_identity": "Explorer",
+    "manager_is_separate_identity": false,
+    "manager_model": "granular capability attached to Explorer",
+    "admin_is_separate_privilege": true,
+    "friend_model": "mutual follows",
+    "friend_request_exists": false,
+    "close_friend_model": "owner-selected actual friend"
+  },
+  "manager_capabilities": [
+    "businesses",
+    "properties",
+    "activity_clubs",
+    "events"
+  ],
+  "audience": {
+    "canonical_order": [
+      "nobody",
+      "selected",
+      "close_friends",
+      "friends",
+      "followers",
+      "everyone"
+    ],
+    "unknown_fails_closed": true,
+    "profile_visibility_is_ceiling": true,
+    "presence_is_more_restrictive_than_generic_content": true,
+    "legacy_synonyms_forbidden_as_canonical_values": [
+      "private",
+      "public"
+    ]
+  },
+  "primary_navigation_observation": {
+    "tabs": [
+      {"key": "feed", "label": "News Feed", "route": "/feed", "requires_account": true},
+      {"key": "messages", "label": "Messages", "route": "/messages", "requires_account": true},
+      {"key": "map", "label": "Map", "route": "/map", "requires_account": false, "raised": true},
+      {"key": "score", "label": "Leaderboard", "route": "/leaderboards", "requires_account": true},
+      {"key": "profile", "label": "Profile", "route": "/profile", "requires_account": true}
+    ],
+    "map_centre_action": {"label": "Camera", "route": "/camera"},
+    "map_centre_upward_action": {"label": "Discover", "route": "/discover"},
+    "generic_create_route_exists": false,
+    "design_locked": false
+  },
+  "routes": [
+    "/", "/settings", "/legal/privacy", "/legal/terms", "/map", "/messages", "/messages/[id]", "/discover", "/scan", "/camera", "/qr/[code]", "/profile", "/profile/[id]", "/profile/edit", "/explorers", "/connections/[id]", "/feed", "/moments/create", "/moments/[id]", "/memories/create", "/memories/[id]", "/social-comments/[id]", "/leaderboards", "/notifications",
+    "/linkups", "/linkups/create", "/linkups/[id]", "/linkups/edit/[id]", "/linkups/board/[id]", "/live", "/checkins/create", "/safety/blocked",
+    "/auth/signup", "/auth/login", "/auth/forgot-password", "/auth/update-password",
+    "/manager/dashboard", "/manager/requests", "/manager/qr/[type]/[id]", "/manager/membership-status/[id]",
+    "/business/[id]", "/business/dashboard", "/business/add", "/business/edit/[id]", "/business/review/[id]", "/business/review-action",
+    "/property/[id]", "/property/dashboard", "/property/add", "/property/edit/[id]", "/property/reviews", "/property/review/[id]", "/property/review-action",
+    "/places", "/places/[id]", "/places/review/[id]",
+    "/activity-clubs", "/activity-clubs/[id]", "/activity-clubs/add", "/activity-clubs/edit/[id]", "/activity-clubs/message-board/[id]", "/activity-clubs/review/[id]",
+    "/events", "/events/[id]", "/events/add", "/events/edit/[id]", "/events/review/[id]",
+    "/admin/claims", "/admin/activities", "/admin/areas", "/admin/audit", "/admin/dashboard", "/admin/explorers", "/admin/listings", "/admin/moderation", "/admin/public-places"
+  ],
+  "creation_invariants": {
+    "moment_starts_at_camera": true,
+    "memory_starts_at_camera": true,
+    "display_surfaces_may_bypass_camera": false,
+    "camera_preserves_place_preset": true,
+    "generic_create_hub_present": false
+  },
+  "presence": {
+    "checkin_valid_target_families": ["park", "public_place"],
+    "requires_canonical_public_place_id": true,
+    "approximate_coordinates_supported": true,
+    "expires": true,
+    "local_public_audience_button": false,
+    "audience_source": "profile visibility ceiling plus presence cap"
+  },
+  "content_lifecycles": {
+    "moment": {"meaning": "what is happening now", "expires": true, "permanent_profile_gallery": false, "can_create_memory": true},
+    "memory": {"meaning": "what happened here", "persistent": true, "map_window_independent_of_record_lifetime": true, "current_map_expiry_deletes_record": false},
+    "review": {"is_moment": false, "is_memory": false, "persistent_contribution": true}
+  },
+  "map_invariants": {
+    "engine": "MapLibre",
+    "memory_fade_fraction": 0.25,
+    "memory_min_pre_removal_opacity": 0.35,
+    "heat_precision_decimal_places": 2,
+    "heat_min_contributions": 3,
+    "heat_min_distinct_posters": 2,
+    "heat_weights": {"review": 3, "memory": 2, "moment": 1},
+    "open_map_linkup_coordinates_are_approximate": true
+  },
+  "messaging": {
+    "one_hub": true,
+    "views": ["all", "friends", "managers", "boards"],
+    "direct_conversation_kinds": ["friend", "listing"],
+    "manager_view_is_account_identity": false,
+    "board_sources": ["linkup", "activity_club"],
+    "board_access_must_follow_underlying_policy": true
+  },
+  "entities": {
+    "explorer_profile": {"relations": ["follows", "close_friends", "favourites", "notifications", "blocks", "safety_reports", "manager_capabilities", "content", "reviews"]},
+    "business": {"manager_capability": "businesses", "supports_claim": true, "supports_reviews": true},
+    "property": {"manager_capability": "properties", "supports_claim": true, "supports_reviews": true},
+    "public_place": {"checkin_target": true},
+    "activity_club": {"manager_capability": "activity_clubs", "children": ["sessions", "announcements", "memberships", "message_board"], "supports_reviews": true},
+    "event": {"manager_capability": "events", "time_bound": true, "supports_reviews": true},
+    "linkup": {"organiser": "Explorer", "children": ["attendees", "private_details", "message_board"], "private_details_attendee_only": true},
+    "checkin": {"temporary": true, "public_place_only": true},
+    "moment": {"temporary": true, "can_spawn_separate_memory": true},
+    "memory": {"persistent": true},
+    "review": {"persistent": true, "supports_media": true, "supports_verification": true, "supports_social_response": true},
+    "claim": {"purpose": "takeover/management assertion for existing listing", "admin_decision_boundary": true}
+  },
+  "state_families": [
+    "loading", "slow_network", "empty", "no_results", "error", "retry", "signed_out", "unauthorised_private", "location_unavailable", "permission_denied", "pending", "approved", "rejected", "removed", "full_capacity", "expired", "cancelled", "unread", "read", "missing_media", "long_content", "keyboard_open", "reduced_motion", "destructive_confirmation", "server_write_pending", "screen_reader_non_map"
+  ],
+  "permission_invariants": [
+    "RLS/database logic is authoritative; hiding UI is not security",
+    "client permission questions go through utils/permissions.js",
+    "account_type is not a client permission decision",
+    "admin capability is not implied by Manager capability",
+    "private Link-up meeting details are not visible to non-attendees",
+    "presence is capped at friends/stricter ceiling rather than one-way followers",
+    "close-friends list is private to its owner",
+    "claiming an existing listing is distinct from creating/managing one's own entity"
+  ],
+  "confirmed_non_features": [
+    "separate Manager account identity",
+    "Friend Request workflow",
+    "permanent Check-ins/live movement history",
+    "Moment and Memory as one lifecycle",
+    "generic /create hub",
+    "upload-first Moment/Memory creation bypassing camera",
+    "Check-ins at businesses, Clubs or Events",
+    "public attendee-only Link-up meeting details",
+    "transport/taxi booking",
+    "food ordering/delivery",
+    "unproven payment checkout",
+    "future local-services marketplace",
+    "unproven AI recommendation capability"
+  ],
+  "verification_commands": [
+    "npm test", "npm run test:ci", "npm run verify:social", "npm run verify:live", "npm run verify:screens", "npm run verify:taxonomy", "npm run verify:markers", "npm run verify:place", "npm run verify:cards", "npm run verify:discover", "npm run verify:reputation", "npm run verify:places", "npm run verify:memories", "npm run verify:mymap", "npm run verify:livingmap", "npm run verify:browser", "npm run verify:trending", "npm run verify:score", "npm run verify:manager", "npm run verify:listings", "npm run verify:permissions", "npm run verify:friends", "npm run verify:contrast", "npm run verify:nativemap", "npm run verify:audience", "npm run verify:camera", "npm run verify:audit"
+  ],
+  "evidence": {
+    "app/_layout.js": "74c9ac7fcc098cb202123e0994d170fd91a63f50",
+    "utils/navigation.js": "f0761222870bd2a8c8386ae5acbffb5fc08cfc75",
+    "utils/permissions.js": "1db1648a2673e2284d0fbff4de928b3710f5e4e3",
+    "app/auth/signup.js": "fdc7448fd5a50c9cf846a012c88ca313a9b105ea",
+    "RULES.md": "3efc45fa68aff8342efc7b76d05ca06b8a202c11",
+    "app/checkins/create.js": "781763cc6174c28e346984914d11543ebcabaf2d",
+    "utils/messageViews.js": "8c45016ea507dec73aa0fec921f546d3a0d5a3a5",
+    "app/messages/index.js": "999b6aa62cd50152a9eff537986802dc905c1ea3",
+    "components/ExplorerProfileScreen.js": "e08a7d152ca67ee08641e2fda8bd109acf6652fa",
+    "app/manager/dashboard.js": "2dbd5da2fa54336c004f12ca9cb56a7ead03d0db",
+    "utils/mapLayers.js": "d3c6006401f9ee32b32274734c4fbd26441c7f87",
+    "scripts/verify-one-permission-point.cjs": "b3556ab836c3c40fbc89cc6616018a537f0e375e",
+    "scripts/verify-audience-vocabulary.cjs": "81d2fabc20f773195628da880d4629ab99d6c126",
+    "scripts/verify-camera-only-creation.cjs": "5dd961e24b746a58ef6db663def882c72ea57eb8",
+    "package.json": "3e13084b114a01cedce966f03e46dd1a2cea296c"
+  }
+}
