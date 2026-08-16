@@ -4,56 +4,112 @@ import {
   DESIGN_TRANSFORMATION_DIMENSIONS,
   PERFECT_10_CATEGORIES,
   XPLORER_CHALLENGERS,
+  XPLORER_TOURNAMENT_B_CONTRACT_REVISION,
   XPLORER_TOURNAMENT_B_ROUTE_COUNT,
   XPLORER_TOURNAMENT_B_SOURCE_COMMIT,
   challengerDesignDeltaSchema,
   challengerPerfect10Schema,
+  challengerProductTruthCheckSchema,
   prepareXplorerChallengerPacket,
   tournamentBStatus,
   validateXplorerTournamentB,
 } from '../../src/tournaments/xplorer-challenger-b.js';
 
 describe('Xplorer Tournament B runtime', () => {
-  it('validates the locked shared Product Truth and all seven persona packs', async () => {
+  it('validates capability-first Product Truth v2 and all seven persona packs', async () => {
     const result = await validateXplorerTournamentB(process.cwd());
 
     expect(result.ok).toBe(true);
     expect(result.sourceCommit).toBe(XPLORER_TOURNAMENT_B_SOURCE_COMMIT);
+    expect(result.contractRevision).toBe(XPLORER_TOURNAMENT_B_CONTRACT_REVISION);
     expect(result.routeCount).toBe(XPLORER_TOURNAMENT_B_ROUTE_COUNT);
     expect(result.personas).toHaveLength(XPLORER_CHALLENGERS.length);
     expect(result.sharedInputFingerprint).toMatch(/^[0-9a-f]{64}$/);
+    expect(result.sharedInputs.map((input) => input.path)).toContain(
+      'knowledge/tournaments/challengers/2026-08-15-xplorer/PRODUCT_TRUTH_V2_CONTRACT.md',
+    );
     expect(new Set(result.personas.map((persona) => persona.sha256)).size).toBe(XPLORER_CHALLENGERS.length);
   });
 
-  it('prepares Katie first from the same frozen inputs without using the generic round planner', async () => {
+  it('prepares a v2 Katie packet that gives the persona implementation freedom without weakening Product Truth', async () => {
     const packet = await prepareXplorerChallengerPacket({
       knowledgeRoot: process.cwd(),
       challenger: 'katie-dill',
     });
 
+    expect(packet.schemaVersion).toBe(2);
+    expect(packet.contractRevision).toBe(XPLORER_TOURNAMENT_B_CONTRACT_REVISION);
     expect(packet.order).toBe(1);
     expect(packet.challengerName).toBe('Katie Dill');
     expect(packet.sourceCommit).toBe(XPLORER_TOURNAMENT_B_SOURCE_COMMIT);
     expect(packet.requiredOutputs).toContain('prototype/index.html');
     expect(packet.requiredOutputs).toContain('PERFECT_10.json');
     expect(packet.executionPrompt).toContain('BEGIN SELECTED PERSONA PACK');
-    expect(packet.executionPrompt).toContain('A single score below 5/5 blocks submission');
+    expect(packet.executionPrompt).toContain('Frozen source wins for product/data/capability facts');
+    expect(packet.executionPrompt).toContain('Navigation, headers, screen grouping, control placement, gestures');
+    expect(packet.executionPrompt).toContain('classify it before changing the design');
+    expect(packet.executionPrompt).toContain('replace it with outcome-level verification');
     expect(packet.executionPrompt).toContain(packet.sharedInputFingerprint);
     expect(packet.executionPrompt).toContain(packet.personaFingerprint);
   });
 
-  it('prepares Alex with the mandatory creative-independence transformation gate', async () => {
-    const packet = await prepareXplorerChallengerPacket({
-      knowledgeRoot: process.cwd(),
-      challenger: 'alex-schleifer',
-    });
+  it('does not silently treat a pre-v2 prior candidate as v2-locked', async () => {
+    await expect(
+      prepareXplorerChallengerPacket({
+        knowledgeRoot: process.cwd(),
+        challenger: 'alex-schleifer',
+      }),
+    ).rejects.toThrow(/must be reviewed and locked under 2\.0-capability-first/);
+  });
 
-    expect(packet.order).toBe(2);
-    expect(packet.requiredOutputs).toContain('DESIGN_DELTA.json');
-    expect(packet.transformationStandard?.path).toBe('knowledge/DESIGN_TRANSFORMATION_STANDARD.md');
-    expect(packet.transformationStandard?.sha256).toMatch(/^[0-9a-f]{64}$/);
-    expect(packet.executionPrompt).toContain('Existing Xplorer UI is NOT a template');
-    expect(packet.executionPrompt).toContain('A reskin or simplified old layout automatically fails');
+  it('requires migrated legacy UI assertions to name the protected outcome and replacement verification', () => {
+    const valid = challengerProductTruthCheckSchema.safeParse({
+      schemaVersion: 2,
+      contractRevision: XPLORER_TOURNAMENT_B_CONTRACT_REVISION,
+      challenger: 'karri-saarinen',
+      sourceCommit: XPLORER_TOURNAMENT_B_SOURCE_COMMIT,
+      checks: Array.from({ length: 20 }, (_, index) => ({
+        id: `truth-${index}`,
+        passed: true,
+        evidence: 'Concrete capability, lifecycle, privacy or outcome evidence from the candidate.',
+      })),
+      migratedImplementationAssertions: [
+        {
+          oldAssertion: 'Frozen navigation required one exact upward swipe gesture.',
+          protectedOutcome: 'Discover remains clearly reachable from the exploration experience.',
+          replacementVerification: 'Outcome journey test reaches Discover through the redesigned visible interaction.',
+          passed: true,
+        },
+      ],
+      violations: [],
+      passed: true,
+      checkedAt: new Date().toISOString(),
+    });
+    expect(valid.success).toBe(true);
+
+    const invalid = challengerProductTruthCheckSchema.safeParse({
+      schemaVersion: 2,
+      contractRevision: XPLORER_TOURNAMENT_B_CONTRACT_REVISION,
+      challenger: 'karri-saarinen',
+      sourceCommit: XPLORER_TOURNAMENT_B_SOURCE_COMMIT,
+      checks: Array.from({ length: 20 }, (_, index) => ({
+        id: `truth-${index}`,
+        passed: true,
+        evidence: 'Concrete capability evidence.',
+      })),
+      migratedImplementationAssertions: [
+        {
+          oldAssertion: 'Old gesture',
+          protectedOutcome: '',
+          replacementVerification: '',
+          passed: true,
+        },
+      ],
+      violations: [],
+      passed: true,
+      checkedAt: new Date().toISOString(),
+    });
+    expect(invalid.success).toBe(false);
   });
 
   it('rejects design-delta proof that is not a genuine transformation', () => {
@@ -82,8 +138,16 @@ describe('Xplorer Tournament B runtime', () => {
       challenger: 'alex-schleifer',
       sourceCommit: XPLORER_TOURNAMENT_B_SOURCE_COMMIT,
       sameDesign: true,
-      dimensions: DESIGN_TRANSFORMATION_DIMENSIONS.map((dimension) => ({ dimension, rating: 'major', evidence: ['evidence evidence'] })),
-      screenFamilies: Array.from({ length: 10 }, (_, index) => ({ family: `family-${index}`, structuralChange: true, evidence: 'structural evidence' })),
+      dimensions: DESIGN_TRANSFORMATION_DIMENSIONS.map((dimension) => ({
+        dimension,
+        rating: 'major',
+        evidence: ['evidence evidence'],
+      })),
+      screenFamilies: Array.from({ length: 10 }, (_, index) => ({
+        family: `family-${index}`,
+        structuralChange: true,
+        evidence: 'structural evidence',
+      })),
       paletteIndependence: 'This intentionally long palette explanation still cannot rescue sameDesign=true.',
       designedFromPersonaModel: true,
     });
@@ -118,23 +182,18 @@ describe('Xplorer Tournament B runtime', () => {
     expect(invalid.success).toBe(false);
   });
 
-  it('keeps tournament status strictly sequential as candidates become locked', async () => {
+  it('surfaces pre-v2 candidates instead of pretending they are current locks', async () => {
     const result = await tournamentBStatus(process.cwd());
     const statuses = result.challengers.map((challenger) => challenger.status);
-    const nextIndexes = statuses
-      .map((status, index) => (status === 'next' ? index : -1))
-      .filter((index) => index >= 0);
 
-    expect(nextIndexes.length).toBeLessThanOrEqual(1);
+    expect(result.contractRevision).toBe(XPLORER_TOURNAMENT_B_CONTRACT_REVISION);
+    expect(statuses).toContain('pre-v2');
+    expect(result.challengers[0]?.slug).toBe('katie-dill');
+    expect(result.challengers[0]?.status).toBe('pre-v2');
 
-    const firstNonLocked = statuses.findIndex((status) => status !== 'locked');
-    if (firstNonLocked === -1) {
-      expect(statuses.every((status) => status === 'locked')).toBe(true);
-      return;
-    }
-
-    expect(statuses[firstNonLocked]).toBe('next');
-    expect(statuses.slice(0, firstNonLocked).every((status) => status === 'locked')).toBe(true);
-    expect(statuses.slice(firstNonLocked + 1).every((status) => status === 'blocked')).toBe(true);
+    const firstUnresolved = statuses.findIndex((status) => status !== 'locked');
+    expect(firstUnresolved).toBeGreaterThanOrEqual(0);
+    expect(statuses.slice(0, firstUnresolved).every((status) => status === 'locked')).toBe(true);
+    expect(statuses.slice(firstUnresolved + 1).every((status) => status !== 'locked')).toBe(true);
   });
 });
