@@ -17,6 +17,16 @@ import { formatStatus, runStatus } from './commands/status.js';
 import { formatChooseResult, runChoose } from './commands/choose.js';
 import { formatDoctorResult, runDoctor } from './commands/doctor.js';
 import {
+  formatChallengerPrepare,
+  formatChallengerStatus,
+  formatChallengerValidate,
+  formatChallengerVerify,
+  runChallengerPrepare,
+  runChallengerStatus,
+  runChallengerValidate,
+  runChallengerVerify,
+} from './commands/challenger.js';
+import {
   formatCleanResult,
   formatProtectResult,
   formatWorkflowResult,
@@ -103,7 +113,6 @@ export function buildProgram(): Command {
           repo: options.repo,
           branch: options.branch,
           force: options.force ?? false,
-          // commander maps --no-ai to `ai: false`
           noAi: options.ai === false,
         });
         output(context, formatInspectResult(result), result);
@@ -154,6 +163,66 @@ export function buildProgram(): Command {
         output(context, formatRoundResult(result, context.dryRun), result);
       },
     );
+
+  // -- challenger ----------------------------------------------------------
+  // Tournament B deliberately does not route through `round`: that command
+  // plans generic parallel candidates and uses the configured Claude runner.
+  // This command is deterministic/model-agnostic. It prepares the exact packet
+  // an external orchestrator (including this ChatGPT workflow) executes, and
+  // refuses to advance until the previous challenger has a valid locked result.
+  const challenger = program
+    .command('challenger')
+    .description('validate, prepare and verify the sequential Xplorer Tournament B challengers');
+
+  challenger
+    .command('validate')
+    .description('validate the frozen Product Truth package and all seven persona packs')
+    .action(async (_options: unknown, command: Command) => {
+      const context = await createContext(globalOptions(command));
+      const result = await runChallengerValidate(context);
+      output(context, formatChallengerValidate(result), result);
+    });
+
+  challenger
+    .command('status')
+    .description('show which Tournament B challenger is locked, next or blocked')
+    .action(async (_options: unknown, command: Command) => {
+      const context = await createContext(globalOptions(command));
+      const result = await runChallengerStatus(context);
+      output(context, formatChallengerStatus(result), result);
+    });
+
+  challenger
+    .command('prepare')
+    .description('assemble the exact model-agnostic execution packet for the next challenger')
+    .argument('<challenger>', 'challenger slug, e.g. katie-dill')
+    .option('--source-repo <path>', 'optional local Xplorer clone; verifies the frozen commit exists')
+    .option('--write', 'materialise RUN_PACKET.md and RUN_PACKET.json in the challenger candidate folder', false)
+    .action(
+      async (
+        challengerSlug: string,
+        options: { sourceRepo?: string; write?: boolean },
+        command: Command,
+      ) => {
+        const context = await createContext(globalOptions(command));
+        const result = await runChallengerPrepare(context, {
+          challenger: challengerSlug,
+          sourceRepo: options.sourceRepo,
+          write: options.write ?? false,
+        });
+        output(context, formatChallengerPrepare(result, options.write ?? false), result);
+      },
+    );
+
+  challenger
+    .command('verify')
+    .description('hard-validate a completed challenger before the next one may start')
+    .argument('<challenger>', 'challenger slug, e.g. katie-dill')
+    .action(async (challengerSlug: string, _options: unknown, command: Command) => {
+      const context = await createContext(globalOptions(command));
+      const result = await runChallengerVerify(context, challengerSlug);
+      output(context, formatChallengerVerify(challengerSlug, result), result);
+    });
 
   // -- status --------------------------------------------------------------
   program
@@ -305,7 +374,6 @@ export async function main(argv: readonly string[] = process.argv): Promise<numb
     await program.parseAsync([...argv]);
     return typeof process.exitCode === 'number' ? process.exitCode : 0;
   } catch (error) {
-    // Commander throws for --help and --version; those are successful exits.
     const commanderCode = (error as { code?: string }).code;
     if (commanderCode === 'commander.helpDisplayed' || commanderCode === 'commander.version') return 0;
     if (commanderCode === 'commander.help') return 0;
@@ -317,7 +385,6 @@ export async function main(argv: readonly string[] = process.argv): Promise<numb
     }
 
     if (commanderCode?.startsWith('commander.')) {
-      // Commander has already written its own message.
       return typeof (error as { exitCode?: number }).exitCode === 'number'
         ? (error as { exitCode: number }).exitCode
         : 1;
