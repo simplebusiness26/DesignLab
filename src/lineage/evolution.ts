@@ -333,10 +333,11 @@ function normaliseDirections(
     }
     seen.add(slug);
 
-    // A borrowing the human asked for is a fact, not a suggestion: make sure
-    // it survives even if the model omitted it from `borrowsFrom`.
+    // When a model already describes the requested subsystem in a direction,
+    // stamp the sibling slot onto that direction even if `borrowsFrom` omitted
+    // it. This makes the structured plan agree with its own prose.
     const impliedBorrowings = references.borrowings
-      .filter((borrowing) => direction.thesis.toLowerCase().includes(borrowing.subject.toLowerCase().split(' ')[0] ?? ''))
+      .filter((borrowing) => directionMentionsSubject(direction, borrowing.subject))
       .map((borrowing) => borrowing.slot);
 
     return {
@@ -346,7 +347,76 @@ function normaliseDirections(
     };
   });
 
-  return normalised.length > 0 ? normalised : directions.slice(0, designCount);
+  if (normalised.length === 0) return directions.slice(0, designCount);
+
+  // Human feedback outranks model omission. The prompt already calls explicit
+  // borrowings requirements; this deterministic pass makes that statement
+  // true. If the model did not create a matching graft, attach the missing
+  // borrowing to the most suitable existing direction and update its prose so
+  // the plan does not merely carry a hidden slot id with no design meaning.
+  // Prefer a moderate direction, preserving dedicated conservative and radical
+  // probes when possible. Multiple requested subsystems may legitimately land
+  // in one hybrid direction.
+  for (const borrowing of references.borrowings) {
+    const represented = normalised.some(
+      (direction) =>
+        direction.borrowsFrom.includes(borrowing.slot) &&
+        directionMentionsSubject(direction, borrowing.subject),
+    );
+    if (represented) continue;
+
+    const semanticIndex = normalised.findIndex((direction) =>
+      directionMentionsSubject(direction, borrowing.subject),
+    );
+    const targetIndex = semanticIndex >= 0 ? semanticIndex : bestBorrowingTarget(normalised);
+    const target = normalised[targetIndex];
+    if (!target) continue;
+
+    const label = `candidate ${borrowing.slot}'s ${borrowing.subject}`;
+    normalised[targetIndex] = {
+      ...target,
+      name: directionMentionsSubject(target, borrowing.subject)
+        ? target.name
+        : `${target.name} + ${borrowing.slot}'s ${borrowing.subject}`,
+      thesis: directionMentionsSubject(target, borrowing.subject)
+        ? target.thesis
+        : `${target.thesis} Explicitly incorporate ${label}, as required by the human feedback.`,
+      relation: `${target.relation}; incorporates ${borrowing.subject} from candidate ${borrowing.slot}`,
+      borrowsFrom: [...new Set([...target.borrowsFrom, borrowing.slot])],
+    };
+  }
+
+  return normalised;
+}
+
+function directionMentionsSubject(
+  direction: NextGenerationPlan['directions'][number],
+  subject: string,
+): boolean {
+  const needle = subject.trim().toLowerCase();
+  if (!needle) return false;
+  const haystack = `${direction.name} ${direction.thesis} ${direction.relation}`.toLowerCase();
+  if (haystack.includes(needle)) return true;
+  const firstWord = needle.split(/\s+/)[0];
+  return firstWord ? haystack.includes(firstWord) : false;
+}
+
+function bestBorrowingTarget(directions: NextGenerationPlan['directions']): number {
+  let bestIndex = 0;
+  let bestScore = Number.POSITIVE_INFINITY;
+
+  directions.forEach((direction, index) => {
+    // Keep pure conservative/radical probes intact where a moderate hybrid is
+    // available; among peers, use the direction carrying the fewest grafts.
+    const riskPenalty = direction.riskLevel === 'moderate' ? 0 : direction.riskLevel === 'conservative' ? 100 : 200;
+    const score = riskPenalty + direction.borrowsFrom.length;
+    if (score < bestScore) {
+      bestScore = score;
+      bestIndex = index;
+    }
+  });
+
+  return bestIndex;
 }
 
 /**
