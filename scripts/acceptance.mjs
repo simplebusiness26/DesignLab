@@ -20,6 +20,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const CLI = join(ROOT, 'bin', 'designlab.js');
 const KEEP = process.argv.includes('--keep');
 const FROZEN_XPLORER = '78632b12eeb4e4123b1a767c8b815fe6617681f9';
+const TOURNAMENT_B_CONTRACT = '2.0-capability-first';
 
 const GREEN = '\u001b[32m';
 const RED = '\u001b[31m';
@@ -196,34 +197,44 @@ async function main() {
   process.stdout.write(`${BOLD}DesignLab acceptance run${RESET}\n`);
 
   // -----------------------------------------------------------------------
-  // Tournament B: prove the new strict path before exercising legacy V1.
+  // Tournament B: prove Product Truth V2 before exercising the generic V1 engine.
   // -----------------------------------------------------------------------
-  heading('TOURNAMENT B — frozen inputs, order and model-agnostic packet');
+  heading('TOURNAMENT B — Product Truth v2, frozen inputs, order and model-agnostic packet');
   {
     const base = ['--cwd', ROOT, 'challenger'];
     const validated = await runJson([...base, 'validate']);
     check('Tournament B validation command succeeds', validated.code === 0 && validated.data !== null);
     check('frozen Xplorer commit is exact', validated.data?.sourceCommit === FROZEN_XPLORER);
+    check('Product Truth v2 contract revision is exact', validated.data?.contractRevision === TOURNAMENT_B_CONTRACT);
     check('76 unique frozen routes are represented', validated.data?.routeCount === 76);
     check('all seven persona packs validate', validated.data?.personas?.length === 7);
     check('shared inputs have a stable SHA-256 fingerprint', /^[0-9a-f]{64}$/.test(validated.data?.sharedInputFingerprint ?? ''));
 
     const status = await runJson([...base, 'status']);
     check('Tournament B status command succeeds', status.code === 0 && status.data !== null);
+    check('Tournament B status reports Product Truth v2', status.data?.contractRevision === TOURNAMENT_B_CONTRACT);
     const challengers = status.data?.challengers ?? [];
     const next = challengers.filter((item) => item.status === 'next');
-    const katieLocked = challengers.find((item) => item.slug === 'katie-dill')?.status === 'locked';
+    const katieStatus = challengers.find((item) => item.slug === 'katie-dill')?.status;
+    const katieLocked = katieStatus === 'locked';
+    const katiePreV2 = katieStatus === 'pre-v2';
+
     if (katieLocked) {
-      check('Katie remains locked once her validated result exists', challengers.find((item) => item.slug === 'katie-dill')?.status === 'locked');
+      check('Katie remains locked once her Product Truth v2 result exists', katieStatus === 'locked');
       check('Alex is the only next challenger after Katie locks', next.length === 1 && next[0]?.slug === 'alex-schleifer');
       check('challengers after Alex remain blocked', challengers.slice(2).every((item) => item.status === 'blocked'));
+    } else if (katiePreV2) {
+      check('Katie is explicitly marked pre-v2 rather than silently relocked', katieStatus === 'pre-v2');
+      check('no later challenger becomes current while Katie awaits v2 review', next.length === 0);
+      check('later challengers are not reported as current v2 locks', challengers.slice(1).every((item) => item.status !== 'locked'));
     } else {
-      check('Katie is the only next challenger before any result is locked', next.length === 1 && next[0]?.slug === 'katie-dill');
+      check('Katie is the only next challenger when no prior result exists', next.length === 1 && next[0]?.slug === 'katie-dill');
       check('later challengers are blocked', challengers.slice(1).every((item) => item.status === 'blocked'));
     }
 
     const katie = await runJson([...base, 'prepare', 'katie-dill']);
     check('Katie packet prepares without a model backend', katie.code === 0 && katie.data !== null);
+    check('Katie packet uses schema v2', katie.data?.schemaVersion === 2 && katie.data?.contractRevision === TOURNAMENT_B_CONTRACT);
     check('Katie is challenger 1', katie.data?.order === 1);
     check('Katie packet is frozen to the same Xplorer SHA', katie.data?.sourceCommit === FROZEN_XPLORER);
     check('Katie packet loads only her persona path', katie.data?.personaPath?.endsWith('/katie-dill/PERSONA_PACK.md'));
@@ -231,16 +242,23 @@ async function main() {
     check('packet requires Product Truth and Perfect-10 proof',
       katie.data?.requiredOutputs?.includes('PRODUCT_TRUTH_CHECK.json') &&
       katie.data?.requiredOutputs?.includes('PERFECT_10.json'));
+    check('packet explicitly grants implementation freedom',
+      (katie.data?.executionPrompt ?? '').includes('Navigation, headers, screen grouping, control placement, gestures'));
+    check('packet requires legacy UI assertions to be migrated to outcomes',
+      (katie.data?.executionPrompt ?? '').includes('replace it with outcome-level verification'));
 
     const alexProgress = await run([...base, 'prepare', 'alex-schleifer', '--json']);
     if (katieLocked) {
-      check('Alex can start after Katie is locked', alexProgress.code === 0);
+      check('Alex can start after Katie is locked under v2', alexProgress.code === 0);
       const alex = await runJson([...base, 'prepare', 'alex-schleifer']);
       check('Alex packet requires Design Transformation proof', alex.data?.requiredOutputs?.includes('DESIGN_DELTA.json'));
       check('Alex packet loads the creative-independence standard', alex.data?.transformationStandard?.path === 'knowledge/DESIGN_TRANSFORMATION_STANDARD.md');
       check('Alex transformation standard has a stable fingerprint', /^[0-9a-f]{64}$/.test(alex.data?.transformationStandard?.sha256 ?? ''));
     } else {
-      check('Alex cannot start before Katie is locked', alexProgress.code !== 0 && alexProgress.stderr.includes('must be fully locked'));
+      check(
+        'Alex cannot start until Katie is reviewed and locked under v2',
+        alexProgress.code !== 0 && alexProgress.stderr.includes('reviewed and locked under 2.0-capability-first'),
+      );
     }
   }
 
