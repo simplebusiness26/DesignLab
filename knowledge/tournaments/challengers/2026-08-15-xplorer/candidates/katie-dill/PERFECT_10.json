@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "challenger": "katie-dill",
+  "sourceCommit": "78632b12eeb4e4123b1a767c8b815fe6617681f9",
+  "scores": [
+    {
+      "category": "Product Truth Fidelity",
+      "score": 5,
+      "evidence": [
+        "Candidate descends from frozen Xplorer source 78632b12eeb4e4123b1a767c8b815fe6617681f9 and protected backend, permission, audience, routing, map-state and creation surfaces were excluded from the redesign diff.",
+        "The tested candidate passed 926/926 Jest tests, every deterministic Xplorer verifier, and the production browser sweep across all 76 declared routes."
+      ]
+    },
+    {
+      "category": "User-Goal Clarity",
+      "score": 5,
+      "evidence": [
+        "Map controls were reframed from internal filter mechanics into the human questions what are you looking for, when does it matter, and what should the map show.",
+        "Discover elevates the existing recommendation reason under an explicit Why it is here hierarchy before the next action."
+      ]
+    },
+    {
+      "category": "Whole-App Coherence",
+      "score": 5,
+      "evidence": [
+        "The Experience Model connects before, discover, consider, trust, commit, prepare, participate, complete and remember/follow-up rather than treating 76 screens independently.",
+        "Shared navigation, map, Discover, Quick Access, startup framing and global theme consumers use one coherent service hierarchy, while the required whole-app prototype represents all 76 real routes."
+      ]
+    },
+    {
+      "category": "Information Architecture & Navigation",
+      "score": 5,
+      "evidence": [
+        "The proven five persistent destinations remain News Feed, Messages, Map/Camera, Leaderboard and Profile; no capability was hidden behind a new unsupported IA.",
+        "Quick Access retains its permission-correct route filtering while grouping access as service areas and preserving orientation back to the current plan."
+      ]
+    },
+    {
+      "category": "Interaction & State Robustness",
+      "score": 5,
+      "evidence": [
+        "The first footer styling pass exposed a geometry regression; the candidate restored the tested 2px structural boundary and reran the complete suite to 926/926 passing tests.",
+        "The production bundle then rendered every one of the 76 routes in real Chromium without an uncaught error, fake login pass or startup-splash pass."
+      ]
+    },
+    {
+      "category": "Accessibility & Inclusion",
+      "score": 5,
+      "evidence": [
+        "Existing contrast and native-map accessibility verifiers remained enabled and passed; semantic colours were not repurposed as decoration.",
+        "Critical destinations retain visible controls and alternatives rather than becoming gesture-only; the candidate state contract preserves reduced motion, long content, keyboard, screen-reader and non-map expectations."
+      ]
+    },
+    {
+      "category": "Trust, Safety & Privacy",
+      "score": 5,
+      "evidence": [
+        "Explorer identity, Manager-as-capability, mutual-follow friendship, owner-private Close Friends, fail-closed audiences and RLS security boundaries are unchanged.",
+        "Check-in presence remains temporary and restricted, map heat remains privacy-preserving, and the candidate adds no badge or copy that implies verification is a safety guarantee."
+      ]
+    },
+    {
+      "category": "Technical & Performance Realism",
+      "score": 5,
+      "evidence": [
+        "The candidate is implemented in the real Expo/React Native source, not only a mockup; npm tests, deterministic verifiers, Expo production web export, real-browser route verification and Android prebuild all completed successfully.",
+        "No fictional backend service, new data source, new social graph, new account type or hidden real-time dependency is required by the redesign."
+      ]
+    },
+    {
+      "category": "Persona Research Fidelity",
+      "score": 5,
+      "evidence": [
+        "The design follows the selected persona pack's required whole-service stance: Experience Model first, decision-point trust questions, online-to-offline handoff, human context over database objects and craft after structural coherence.",
+        "The self-review explicitly applies the persona rubric and documents weaknesses found and corrected rather than using the designer name as a visual style label."
+      ]
+    },
+    {
+      "category": "Originality, Craft & Product Potential",
+      "score": 5,
+      "evidence": [
+        "The candidate uses Xplorer's own semantic palette and product structure rather than copying Airbnb, Lyft, Stripe or another known product's trade dress.",
+        "Distinctiveness comes from journey framing, calm shared chrome, relevance evidence, grouped service access and confidence-to-go hierarchy rather than arbitrary visual novelty."
+      ]
+    }
+  ],
+  "allPassed": true,
+  "reviewedAt": "2026-08-16T12:49:00Z"
+}
