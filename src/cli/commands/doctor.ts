@@ -60,16 +60,25 @@ export async function runDoctor(context: CliContext): Promise<DoctorResult> {
     ...(nodeMajor >= 20 ? {} : { hint: 'DesignLab requires Node 20.10 or newer.' }),
   });
 
-  // --- claude CLI ---------------------------------------------------------
-  const runner = createAgentRunner(context.config, { logger: context.logger });
-  if (context.config.agentRunner === 'mock') {
+  // --- agent backend ------------------------------------------------------
+  // Dry-run is a real supported execution mode: createContext.createRunner()
+  // force-selects the deterministic mock runner so no Claude binary or model
+  // credential is required. Doctor must describe the same environment the
+  // command will actually use; checking Claude here while the rest of the CLI
+  // uses the mock makes `designlab --dry-run doctor` fail despite its own hint.
+  if (context.dryRun || context.config.agentRunner === 'mock') {
     checks.push({
       name: 'agent backend',
       status: 'warn',
-      detail: 'configured as "mock" — no real model calls will be made',
-      hint: 'Set agentRunner to "claude-code" for real design generation.',
+      detail: context.dryRun
+        ? 'dry-run — deterministic mock backend; no real model calls will be made'
+        : 'configured as "mock" — no real model calls will be made',
+      hint: context.dryRun
+        ? 'Remove --dry-run when you want to verify the configured real model backend.'
+        : 'Set agentRunner to "claude-code" for real design generation.',
     });
   } else {
+    const runner = createAgentRunner(context.config, { logger: context.logger });
     const available = await runner.isAvailable();
     let version = '';
     if (available) {
