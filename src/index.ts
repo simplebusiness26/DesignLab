@@ -69,6 +69,32 @@ export { scoreDiversity, describeDiversityShortfall, type DiversityScore } from 
 export { buildCandidate } from './design/builder.js';
 export { reviewCandidate, overallScore } from './design/reviewer.js';
 
+// Tournament B — model-agnostic sequential challenger runtime
+export {
+  XPLORER_TOURNAMENT_B_ID,
+  XPLORER_TOURNAMENT_B_SOURCE_REPOSITORY,
+  XPLORER_TOURNAMENT_B_SOURCE_BRANCH,
+  XPLORER_TOURNAMENT_B_SOURCE_COMMIT,
+  XPLORER_TOURNAMENT_B_SOURCE_TREE,
+  XPLORER_TOURNAMENT_B_ROUTE_COUNT,
+  XPLORER_TOURNAMENT_B_SHARED_INPUTS,
+  XPLORER_CHALLENGERS,
+  PERFECT_10_CATEGORIES,
+  challengerPerfect10Schema,
+  challengerProductTruthCheckSchema,
+  challengerResultSchema,
+  validateXplorerTournamentB,
+  prepareXplorerChallengerPacket,
+  validateXplorerChallengerResult,
+  tournamentBStatus,
+  type XplorerChallengerSlug,
+  type TournamentBValidation,
+  type ChallengerPacket,
+  type ChallengerPerfect10,
+  type ChallengerProductTruthCheck,
+  type ChallengerResult,
+} from './tournaments/xplorer-challenger-b.js';
+
 // Testing gates
 export { runGates, didAllRequiredGatesPass, formatGateResults, DEFAULT_GATES } from './testing/gates.js';
 
