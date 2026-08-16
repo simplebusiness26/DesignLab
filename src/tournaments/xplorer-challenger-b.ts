@@ -747,7 +747,7 @@ export async function tournamentBStatus(knowledgeRoot: string): Promise<{
     currentLocks.set(challenger.slug, locked);
     preV2.set(
       challenger.slug,
-      !locked && (await fileExists(join(candidateDir(root, challenger.slug), 'RESULT.json')),
+      !locked && (await fileExists(join(candidateDir(root, challenger.slug), 'RESULT.json'))),
     );
   }
 
