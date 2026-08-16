@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "tournament": "Xplorer Challenger Tournament B",
+  "challenger": "alex-schleifer",
+  "challengerName": "Alex Schleifer",
+  "order": 2,
+  "sourceRepository": "simplebusiness26/The-App",
+  "sourceBranchAtFreeze": "main2.0-Dev",
+  "sourceCommit": "78632b12eeb4e4123b1a767c8b815fe6617681f9",
+  "sourceTree": "d6aa748c66cf90ee5637e793d71feaa6b4cf399a",
+  "sharedInputFingerprint": "cdd4265adaa3a2c079958bd2dc57fde46ee4768b09f144d801b07d82f9ef0dfb",
+  "personaFingerprint": "c926c4ecf1f7afa40d087f4cf6b05d0ae7d096916e920652bf4bb0dd1eb95202",
+  "sharedInputs": [
+    {
+      "path": "knowledge/tournaments/challengers/2026-08-15-xplorer/TOURNAMENT.md",
+      "sha256": "ee61355d421575ebb72c1f09b9341aa7413001441534759598c13f2316cb404b",
+      "bytes": 9774
+    },
+    {
+      "path": "knowledge/tournaments/challengers/2026-08-15-xplorer/MASTER_PRODUCT_BRIEF.md",
+      "sha256": "3ef97c3a746bfaf0953bdb92699776ea9115d7a271f9828c0725dda641d0e919",
+      "bytes": 23099
+    },
+    {
+      "path": "knowledge/tournaments/challengers/2026-08-15-xplorer/PRODUCT_TRUTH_ANNEX.md",
+      "sha256": "32435cb4d4a5f4b9a2901b11ca800ca09f069e5620ec1d4caf003fc3bd79b929",
+      "bytes": 30183
+    },
+    {
+      "path": "knowledge/tournaments/challengers/2026-08-15-xplorer/PRODUCT_TRUTH.json",
+      "sha256": "6471904aaa8560274fe3795b58ab67d7b1780a0cdd2ac1c2736d0fc92a2a7600",
+      "bytes": 10415
+    },
+    {
+      "path": "knowledge/prototypes/FULL_APP_HTML_STANDARD.md",
+      "sha256": "c3eb89b2ad45055ec62f0476da7f75da3e2159681e5699504a3b1f465eab4f13",
+      "bytes": 4606
+    },
+    {
+      "path": "knowledge/ANTI_IMITATION_STANDARD.md",
+      "sha256": "cebee26f8c7ac40d05638c09bb01871ba26f6b860fd0f4f65a09b6f875aaf0bd",
+      "bytes": 811
+    },
+    {
+      "path": "knowledge/PERSONA_PERFECT_10_GATE.md",
+      "sha256": "3525dfb057dec2ad25a2da423df00b77122ff6bd586b7e7bf1c2ff2c3a3d21f5",
+      "bytes": 7015
+    }
+  ],
+  "personaPath": "knowledge/personas/ux/alex-schleifer/PERSONA_PACK.md",
+  "requiredOutputs": [
+    "prototype/index.html",
+    "DESIGN_THESIS.md",
+    "SELF_REVIEW.md",
+    "PERFECT_10.json",
+    "PRODUCT_TRUTH_CHECK.json",
+    "RESULT.json",
+    "DESIGN_DELTA.json"
+  ],
+  "transformationStandard": {
+    "path": "knowledge/DESIGN_TRANSFORMATION_STANDARD.md",
+    "sha256": "3237d04b801d11b6331c98acab57ad659e5007a979abddd2f47744d4468e8490",
+    "bytes": 6938
+  }
+}
