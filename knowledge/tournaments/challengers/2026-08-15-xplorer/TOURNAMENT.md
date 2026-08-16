@@ -25,8 +25,9 @@ Every challenger MUST receive these exact shared inputs before its persona-speci
 4. `knowledge/prototypes/FULL_APP_HTML_STANDARD.md`
 5. `knowledge/ANTI_IMITATION_STANDARD.md`
 6. `knowledge/PERSONA_PERFECT_10_GATE.md`
+7. this `TOURNAMENT.md`
 
-The three Tournament B Product Truth files are persona-neutral and may not be rewritten per challenger.
+The Tournament B Product Truth files are persona-neutral and may not be rewritten per challenger.
 
 The candidate must also inspect the actual Xplorer repository at the frozen SHA. The shared package is an authoritative guide to the frozen product, not permission to skip code inspection.
 
@@ -65,6 +66,70 @@ Current routes are evidence of implemented capability, not a command to preserve
 
 Each challenger must load only its own `PERSONA_PACK.md` on top of the same shared Product Truth package.
 
+## Runtime enforcement
+
+Tournament B does **not** use the generic `designlab round` planner. That pipeline generates generic design directions, supports parallel candidates and routes through the configured Claude/Fable/Sonnet agents. Tournament B requires a different guarantee: the same frozen product, one selected research-backed persona, one candidate at a time.
+
+The dedicated runtime lives in `src/tournaments/xplorer-challenger-b.ts` and is exposed through:
+
+```text
+designlab challenger validate
+designlab challenger status
+designlab challenger prepare <challenger>
+designlab challenger verify <challenger>
+```
+
+The challenger runtime is **model-agnostic**. `prepare` assembles the exact execution packet and makes no Claude/Fable/Sonnet call. This allows the actual design reasoning to be run by the chosen orchestrator while DesignLab keeps deterministic control of inputs, order and acceptance.
+
+### `challenger validate`
+
+Must pass before a candidate begins. It verifies:
+
+- all shared Product Truth files exist and are non-empty;
+- `PRODUCT_TRUTH.json` is locked to the exact source repository, branch-at-freeze, commit and tree;
+- the route manifest contains exactly 76 unique routes;
+- all seven persona packs exist and are substantial;
+- the universal Explorer identity, Manager capability model, friendship model, camera-first creation rule and Check-in rules are still represented in Product Truth;
+- a SHA-256 fingerprint is calculated across all shared inputs and the frozen source commit.
+
+### `challenger prepare <challenger>`
+
+Preparation is blocked unless every earlier challenger has a valid locked result. The generated packet contains:
+
+- frozen source identity;
+- all shared Product Truth inputs;
+- exactly one selected Persona Pack;
+- shared-input and persona fingerprints;
+- anti-imitation, full-app and Perfect-10 rules;
+- the exact required output contract.
+
+`--source-repo <path>` additionally verifies a local Xplorer clone actually contains the frozen commit. `--write` materialises `RUN_PACKET.md` and `RUN_PACKET.json` in the candidate directory.
+
+### `challenger verify <challenger>`
+
+A challenger cannot become locked merely because a model says it is finished. Verification requires all of these artifacts:
+
+```text
+candidates/<challenger>/prototype/index.html
+candidates/<challenger>/DESIGN_THESIS.md
+candidates/<challenger>/SELF_REVIEW.md
+candidates/<challenger>/PERFECT_10.json
+candidates/<challenger>/PRODUCT_TRUTH_CHECK.json
+candidates/<challenger>/RESULT.json
+```
+
+The runtime then verifies:
+
+- the prototype is a substantive standalone HTML document;
+- thesis and self-review are substantive;
+- `RESULT.json` is locked to the frozen source SHA/tree;
+- Product Truth and Persona Pack fingerprints still match the inputs used to produce the candidate;
+- Product Truth review contains at least 20 unique evidence-backed checks, all passing, with zero violations;
+- Perfect-10 review contains exactly the ten DesignLab categories, every one scored exactly 5/5 with evidence;
+- the result belongs to the correct challenger.
+
+Only after this command passes may the next challenger prepare.
+
 ## Execution structure — sequential and independent
 
 Tournament B runs **one challenger at a time** for focus and quality.
@@ -99,7 +164,8 @@ For each challenger:
 11. run the global Perfect-10 gate;
 12. revise until every category is independently defensible at 5/5;
 13. freeze that candidate and its standalone review artifact;
-14. only then begin the next challenger.
+14. run `designlab challenger verify <challenger>`;
+15. only then begin the next challenger.
 
 ## Product Truth blocking rule
 
