@@ -1,58 +1,147 @@
 # Xplorer Challenger Tournament B
 
-Status: ACTIVE / SEPARATE FROM TOURNAMENT A
-Date: 2026-08-15
+Status: ACTIVE — PRODUCT TRUTH V2
+Contract revision: `2.0-capability-first`
+Date: 2026-08-16
 Source product: `simplebusiness26/The-App`
 Source branch at freeze: `main2.0-Dev`
-**Frozen source commit: `78632b12eeb4e4123b1a767c8b815fe6617681f9`**
-**Frozen source tree: `d6aa748c66cf90ee5637e793d71feaa6b4cf399a`**
+Frozen source commit: `78632b12eeb4e4123b1a767c8b815fe6617681f9`
+Frozen source tree: `d6aa748c66cf90ee5637e793d71feaa6b4cf399a`
 
 ## Purpose
 
-Keep the original four-persona full-app tournament intact and run a second, independent whole-app tournament with a new challenger roster. Tournament B does not overwrite, supersede or modify Tournament A.
+Tournament B asks seven independent research-backed design personas one question:
 
-The goal is seven independent answers to:
+> Given everything Xplorer genuinely **is and can do** at the same frozen source commit, what should the best possible Xplorer become?
 
-> **Given everything Xplorer genuinely does at the same frozen source commit, what should the best possible version of Xplorer become?**
+The frozen product is shared. The professional reasoning lens is the intended creative variable.
 
-## Locked shared Product Truth package
+## Product Truth V2 correction
 
-Every challenger MUST receive these exact shared inputs before its persona-specific work begins:
+During the Alex Schleifer candidate we found a structural problem: some frozen regression tests asserted current UI mechanics strongly enough that they could overrule legitimate persona-led design decisions.
 
-1. `MASTER_PRODUCT_BRIEF.md`
-2. `PRODUCT_TRUTH_ANNEX.md`
-3. `PRODUCT_TRUTH.json`
-4. `knowledge/prototypes/FULL_APP_HTML_STANDARD.md`
-5. `knowledge/ANTI_IMITATION_STANDARD.md`
-6. `knowledge/PERSONA_PERFECT_10_GATE.md`
-7. this `TOURNAMENT.md`
+That is now corrected.
 
-The Tournament B Product Truth files are persona-neutral and may not be rewritten per challenger.
+**Product Truth protects product capability, meaning, privacy, permissions, safety and data consequences. It does not protect the current interface merely because the current interface has tests around it.**
 
-The candidate must also inspect the actual Xplorer repository at the frozen SHA. The shared package is an authoritative guide to the frozen product, not permission to skip code inspection.
+The authoritative policy is `PRODUCT_TRUTH_V2_CONTRACT.md` plus `PRODUCT_TRUTH.json` schema 2.0.
 
-### Truth precedence
+## Shared Product Truth package
 
-If anything conflicts, use:
+Every challenger receives the same shared product inputs:
 
-1. frozen source code;
-2. frozen Supabase migrations/database rules;
-3. frozen tests/deterministic verification gates;
-4. current repository laws where consistent with code;
-5. the locked Tournament B Product Truth package;
-6. older inventories/plans only where still current.
+1. `PRODUCT_TRUTH_V2_CONTRACT.md`
+2. `PRODUCT_TRUTH.json`
+3. `MASTER_PRODUCT_BRIEF.md`
+4. `PRODUCT_TRUTH_ANNEX.md`
+5. `knowledge/prototypes/FULL_APP_HTML_STANDARD.md`
+6. `knowledge/ANTI_IMITATION_STANDARD.md`
+7. `knowledge/PERSONA_PERFECT_10_GATE.md`
+8. this `TOURNAMENT.md`
 
-Do not use the moving head of `main2.0-Dev` after the tournament starts. If the source baseline is intentionally changed, regenerate the shared truth package and restart all challengers from the new common SHA.
+The Annex remains valuable frozen implementation evidence. Where its current-UI observations conflict with V2 creative freedom, V2 wins.
+
+## Truth precedence
+
+Use this order:
+
+1. frozen database schema, migrations, RLS and trusted server-side security rules;
+2. explicit immutable product semantics in Product Truth V2;
+3. capability/lifecycle/permission outcomes proven by frozen source;
+4. frozen source UI as evidence of how the old version happened to implement those outcomes;
+5. automated tests/gates **after classifying what they actually protect**;
+6. current UI observations in the Master Brief/Annex;
+7. old plans and archives.
+
+The old phrase “frozen source wins” means **frozen product facts win**. It does not mean a challenger must preserve frozen layout, navigation, gestures, headers, cards or control placement.
+
+## Three layers
+
+### A. Immutable Product Truth
+
+Must survive:
+
+- all material capabilities;
+- Explorer universal identity;
+- Manager capability model;
+- Admin privilege separation;
+- friendship/Close Friends semantics;
+- privacy/audience/presence rules;
+- Moment/Memory/Review/Check-in meanings and lifecycles;
+- Claim/ownership boundaries;
+- attendee/member/private-board protection;
+- safety/location consequences;
+- real backend/data behaviour;
+- canonical security-relevant vocabulary.
+
+### B. Required outcomes
+
+Must remain possible, but the mechanism can change:
+
+- discover and understand local places/activity;
+- move from discovery to legitimate action;
+- reach capture and create supported Moment/Memory content under the in-app capture law;
+- reach authorised messaging contexts;
+- manage legitimate entities when capability allows;
+- use Admin only with Admin privilege;
+- complete the common benchmark journeys;
+- reach all material capability families represented by the frozen 76-route inventory.
+
+### C. Designer-owned implementation
+
+The persona has full authority over:
+
+- navigation architecture;
+- tab number/order or whether tabs exist;
+- headers and chrome;
+- root Back-button presentation;
+- screen grouping;
+- route-to-screen mapping;
+- control placement;
+- centre-button mechanics;
+- tap/swipe/sheet/menu/dock patterns;
+- Map/Discover/Live relationship;
+- hierarchy/density;
+- components and surfaces;
+- visual system;
+- motion/direct manipulation;
+- Manager/Admin organisation;
+- failure/loading/empty-state presentation.
+
+A challenger does not need permission to depart from the frozen UI.
+
+## Regression-gate rule
+
+A failing test may force redesign only when it proves a violation of Layer A or Layer B, a real runtime/build failure, or a layout-independent accessibility failure.
+
+A test that only asserts the old implementation is diagnostic. Examples include exact tab order, exact header structure, a particular root Back-button rule, exact control placement, a particular gesture, old card composition or old screen grouping.
+
+### No test laundering
+
+Design freedom is not permission to delete tests until green.
+
+Whenever a frozen implementation-specific assertion is retired or rewritten, the candidate must record:
+
+1. the old implementation detail it protected;
+2. the actual product truth/outcome beneath it;
+3. the new outcome-level test or evidence;
+4. proof that the redesigned implementation passes that replacement.
+
+This is how DesignLab gives a persona freedom without returning to fake/broken AI mockups.
+
+## Route rule
+
+The 76 frozen routes are a capability inventory, not required human information architecture.
+
+Candidates may combine, regroup, nest or visually replace route presentation. They may not lose the material capability, break required deep-link/runtime behaviour, or bypass access rules.
 
 ## Shared rules
 
-Every challenger receives the same Product Truth, route/capability facts, benchmark journeys and whole-app review contract.
+Every candidate must redesign Xplorer as one coherent whole product, not a set of showcase screens.
 
-Every candidate must represent the complete app coherently rather than redesigning a single isolated screen.
+Candidates may radically change layout, IA, navigation, interaction language, density, visual system and motion philosophy.
 
-Candidates may redesign layout, navigation architecture, hierarchy, interaction language, density, visual system and motion philosophy, but may not invent product capabilities, account models, permissions or backend behaviour.
-
-Current routes are evidence of implemented capability, not a command to preserve today’s screen grouping. Navigation reorganisation is explicitly allowed when Product Truth remains intact.
+Candidates may not invent capabilities, account models, permissions, backend behaviour or data that the frozen product does not support.
 
 ## Challenger roster
 
@@ -64,13 +153,13 @@ Current routes are evidence of implemented capability, not a command to preserve
 6. **Talia Cotton** — meaningful computational systems, authored variability, data-reactive expression and scalable generators.
 7. **Emil Kowalski** — immediate feedback, frequency-aware motion, performance, accessibility and motion restraint.
 
-Each challenger must load only its own `PERSONA_PACK.md` on top of the same shared Product Truth package.
+Each challenger loads only its own `PERSONA_PACK.md` on top of the shared Product Truth package.
 
-## Runtime enforcement
+## Runtime
 
-Tournament B does **not** use the generic `designlab round` planner. That pipeline generates generic design directions, supports parallel candidates and routes through the configured Claude/Fable/Sonnet agents. Tournament B requires a different guarantee: the same frozen product, one selected research-backed persona, one candidate at a time.
+Dedicated runtime: `src/tournaments/xplorer-challenger-b.ts`
 
-The dedicated runtime lives in `src/tournaments/xplorer-challenger-b.ts` and is exposed through:
+Commands:
 
 ```text
 designlab challenger validate
@@ -79,62 +168,67 @@ designlab challenger prepare <challenger>
 designlab challenger verify <challenger>
 ```
 
-The challenger runtime is **model-agnostic**. `prepare` assembles the exact execution packet and makes no Claude/Fable/Sonnet call. This allows the actual design reasoning to be run by the chosen orchestrator while DesignLab keeps deterministic control of inputs, order and acceptance.
+The runtime is model-agnostic. It assembles deterministic inputs and validates outputs; the chosen orchestrator performs the actual design reasoning.
 
 ### `challenger validate`
 
-Must pass before a candidate begins. It verifies:
+Must verify:
 
-- all shared Product Truth files exist and are non-empty;
-- `PRODUCT_TRUTH.json` is locked to the exact source repository, branch-at-freeze, commit and tree;
-- the route manifest contains exactly 76 unique routes;
-- all seven persona packs exist and are substantial;
-- the universal Explorer identity, Manager capability model, friendship model, camera-first creation rule and Check-in rules are still represented in Product Truth;
-- a SHA-256 fingerprint is calculated across all shared inputs and the frozen source commit.
+- all shared inputs exist;
+- Product Truth points to the exact frozen source SHA/tree;
+- Product Truth is contract revision `2.0-capability-first`;
+- the frozen route inventory contains 76 unique routes;
+- all persona packs exist and are substantial;
+- immutable identity/privacy/lifecycle laws are represented;
+- the shared-input fingerprint is deterministic.
 
-### `challenger prepare <challenger>`
+### `challenger prepare`
 
-Preparation is blocked unless every earlier challenger has a valid locked result. The generated packet contains:
+The packet must instruct the challenger that:
 
-- frozen source identity;
-- all shared Product Truth inputs;
-- exactly one selected Persona Pack;
-- shared-input and persona fingerprints;
-- anti-imitation, full-app and Perfect-10 rules;
-- the exact required output contract.
+- frozen **product facts** win;
+- frozen **UI implementation does not**;
+- legacy regression assertions require classification;
+- navigation and interaction architecture are persona-owned;
+- outcome-level replacement verification is required when implementation-specific tests are retired.
 
-`--source-repo <path>` additionally verifies a local Xplorer clone actually contains the frozen commit. `--write` materialises `RUN_PACKET.md` and `RUN_PACKET.json` in the candidate directory.
+### `challenger verify`
 
-### `challenger verify <challenger>`
-
-A challenger cannot become locked merely because a model says it is finished. Verification requires all of these artifacts:
+Required candidate artifacts remain:
 
 ```text
-candidates/<challenger>/prototype/index.html
-candidates/<challenger>/DESIGN_THESIS.md
-candidates/<challenger>/SELF_REVIEW.md
-candidates/<challenger>/PERFECT_10.json
-candidates/<challenger>/PRODUCT_TRUTH_CHECK.json
-candidates/<challenger>/RESULT.json
+prototype/index.html
+DESIGN_THESIS.md
+SELF_REVIEW.md
+PERFECT_10.json
+PRODUCT_TRUTH_CHECK.json
+RESULT.json
 ```
 
-The runtime then verifies:
+For post-Katie transformation candidates, `DESIGN_DELTA.json` remains required.
 
-- the prototype is a substantive standalone HTML document;
-- thesis and self-review are substantive;
-- `RESULT.json` is locked to the frozen source SHA/tree;
-- Product Truth and Persona Pack fingerprints still match the inputs used to produce the candidate;
-- Product Truth review contains at least 20 unique evidence-backed checks, all passing, with zero violations;
-- Perfect-10 review contains exactly the ten DesignLab categories, every one scored exactly 5/5 with evidence;
-- the result belongs to the correct challenger.
+A candidate cannot lock merely because a model says it is finished.
 
-Only after this command passes may the next challenger prepare.
+## Product Truth blocking rule
 
-## Execution structure — sequential and independent
+Block a candidate if it:
 
-Tournament B runs **one challenger at a time** for focus and quality.
+- invents/removes a material capability;
+- changes identity or relationship semantics;
+- conflates Moment/Memory lifecycles;
+- breaks Check-in/presence/privacy rules;
+- leaks attendee/member/private-board data;
+- weakens Claim/Admin/ownership boundaries;
+- presents future capabilities as current;
+- breaks a required benchmark outcome;
+- creates a real crash/build/accessibility dead end;
+- covers only showcase screens while major capability families are unresolved.
 
-Every challenger begins from the exact same untouched Xplorer source SHA:
+Do **not** block merely because the candidate uses a different header, tab system, gesture, root navigation convention, screen grouping or component composition.
+
+## Execution structure
+
+Each challenger begins from the same frozen source SHA and never inherits another challenger’s implementation:
 
 ```text
 XPLORER 78632b12...
@@ -147,70 +241,41 @@ XPLORER 78632b12...
  └─ Emil Kowalski
 ```
 
-Candidate 2 must not inherit Candidate 1. Candidate 3 must not inherit Candidate 2. No challenger receives another challenger’s design or reasoning.
+For each V2 candidate:
 
-For each challenger:
+1. pin the frozen source;
+2. load Product Truth V2;
+3. load only that persona;
+4. inspect the real source for capability/data reality;
+5. model whole-product journeys/states;
+6. design from persona reasoning rather than frozen screens;
+7. implement the coherent candidate;
+8. classify legacy regression failures;
+9. replace implementation-specific assertions with outcome-level protection where necessary;
+10. run capability truth gates;
+11. run benchmark outcome gates;
+12. run runtime/browser/build gates;
+13. run persona self-review and Design Transformation gate;
+14. run the Perfect-10 gate;
+15. freeze only when all genuine blockers pass.
 
-1. lock the frozen source SHA;
-2. load the shared Product Truth package;
-3. load that challenger’s Persona Pack;
-4. inspect Xplorer code relevant to the persona’s reasoning;
-5. build the persona-required internal model/intake;
-6. diagnose the whole product before styling;
-7. design the complete coherent Xplorer candidate;
-8. test the common benchmark journeys and important states;
-9. run persona-specific self-review;
-10. run Product Truth/invariant checks;
-11. run the global Perfect-10 gate;
-12. revise until every category is independently defensible at 5/5;
-13. freeze that candidate and its standalone review artifact;
-14. run `designlab challenger verify <challenger>`;
-15. only then begin the next challenger.
+## Pre-V2 candidates
 
-## Product Truth blocking rule
+Katie Dill and Alex Schleifer began before this correction. Their work remains historical evidence and must not be discarded automatically.
 
-A candidate is blocked if it does any of the following:
+Before final apples-to-apples judging, each gets an explicit V2 decision:
 
-- invents or removes a material capability;
-- makes Manager a separate identity;
-- changes friendship away from mutual follows;
-- conflates Moment and Memory lifecycles;
-- breaks Check-in/public-place/presence rules;
-- widens privacy or exposes attendee-only information;
-- bypasses camera-first Moment/Memory creation as if upload-first creation currently exists;
-- weakens Claim/Admin ownership boundaries;
-- invents future product features;
-- represents only showcase screens while leaving major route/capability families unresolved.
+- **accept as-is**, if V1 did not materially suppress the persona result; or
+- **revision pass**, if V1 implementation-preserving gates forced meaningful design decisions back toward the old UI.
 
-`PRODUCT_TRUTH_ANNEX.md` contains the detailed candidate truth-check checklist.
+The revision path should reuse good completed work. It is not a blind rebuild.
 
-## Tournament structure
+## Fairness
 
-- Tournament A remains untouched.
-- Tournament B is reviewed independently first.
-- No candidate becomes authoritative until the user explicitly locks it.
-- The user may select whole candidates or individual ideas/subsystems.
-- A later Champions Round may use selected strengths from A and B.
-- Synthesis means a new coherent design, not a literal merge of seven competing codebases.
+For future candidates, the shared Product Truth V2 package and frozen source remain identical. The only intended creative variable is the persona.
 
-## Review surface
+Pre-V2 candidates must be clearly labelled until reviewed under V2; they must never be silently presented as if they had the same creative freedom from the start.
 
-Each challenger is delivered as a standalone, mobile-friendly, whole-app HTML candidate that meets `FULL_APP_HTML_STANDARD.md`.
+## Central rule
 
-After all seven are frozen, build a combined Tournament B review surface that lets the user experience and compare:
-
-- Katie
-- Alex
-- Karri
-- Rauno
-- Rasmus
-- Talia
-- Emil
-
-The user must be able to judge complete versions of Xplorer rather than isolated hero screens.
-
-## Fairness rule
-
-The only intended variable across the seven candidates is the professional reasoning lens.
-
-The frozen product, factual constraints, benchmark scenarios, anti-imitation rules, review standard and DesignLab quality gate remain identical for all seven.
+> Preserve what Xplorer **is and can do**. Give the persona authority over **how Xplorer should work and feel**.
