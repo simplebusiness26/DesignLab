@@ -1,5 +1,6 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "2.0",
+  "contract_revision": "2.0-capability-first",
   "status": "locked_shared_input",
   "product": "Xplorer",
   "tournament": "Xplorer Challenger Tournament B",
@@ -9,9 +10,46 @@
     "commit": "78632b12eeb4e4123b1a767c8b815fe6617681f9",
     "tree": "d6aa748c66cf90ee5637e793d71feaa6b4cf399a"
   },
+  "contract_model": {
+    "principle": "protect product capability and meaning, not frozen interface implementation",
+    "immutable_product_truth": [
+      "real product capabilities and entity relationships",
+      "data meaning and lifecycle semantics",
+      "privacy, permission, ownership and safety boundaries",
+      "backend and database consequences",
+      "canonical security-relevant vocabulary",
+      "material capabilities proven by the frozen source"
+    ],
+    "required_functional_outcomes": [
+      "all material capability families remain reachable",
+      "major user journeys remain completable",
+      "capture remains reachable and respects the in-app Moment/Memory capture law",
+      "local discovery remains reachable",
+      "authorised communication contexts remain reachable",
+      "Manager and Admin work remains correctly capability-gated",
+      "navigation remains coherent on Android and web"
+    ],
+    "designer_owned_implementation": [
+      "primary navigation architecture",
+      "tab count, labels and order where labels are not canonical product vocabulary",
+      "headers, root chrome and back-button presentation",
+      "control placement and shape",
+      "centre-button behaviour",
+      "gestures and gesture thresholds",
+      "screen grouping and route-to-screen mapping",
+      "Map/Discover/Live relationship",
+      "hierarchy, density and disclosure strategy",
+      "component and surface language",
+      "typography, colour, iconography, spacing and depth",
+      "motion, transitions and direct manipulation",
+      "empty/loading/error presentation",
+      "Manager and Admin surface organisation"
+    ]
+  },
   "verification": {
     "route_manifest_source": "app/_layout.js",
     "declared_route_count": 76,
+    "route_manifest_role": "capability_inventory_not_required_information_architecture",
     "recorded_upstream_run": {
       "tests": 926,
       "suites": 67,
@@ -19,14 +57,38 @@
       "independently_rerun_during_annex_generation": false
     },
     "truth_precedence": [
-      "frozen source code",
-      "frozen Supabase migrations/database rules",
-      "frozen deterministic verification gates/tests",
-      "current RULES.md and CLAUDE.md where consistent with code",
-      "MASTER_PRODUCT_BRIEF.md and PRODUCT_TRUTH_ANNEX.md",
-      "screen inventory where current",
-      "older plans/archives"
-    ]
+      "frozen database schema, migrations, RLS and trusted server-side security rules",
+      "explicit immutable semantics in PRODUCT_TRUTH_V2_CONTRACT.md and PRODUCT_TRUTH.json",
+      "capability, lifecycle and permission outcomes proven by frozen source code",
+      "frozen source UI as current implementation evidence",
+      "tests and deterministic gates after classifying what they actually protect",
+      "current UI observations in the Master Brief and Annex",
+      "older plans and archives"
+    ],
+    "regression_gate_policy": {
+      "classification_required_before_forcing_redesign": true,
+      "blocking_when": [
+        "material capability is removed or invented",
+        "product or data meaning changes",
+        "privacy, permission, ownership or safety weakens",
+        "required lifecycle or access rule breaks",
+        "required outcome becomes impossible",
+        "real crash, inaccessible dead end or build failure occurs",
+        "layout-independent accessibility requirement fails"
+      ],
+      "advisory_when_only_asserting": [
+        "exact tab labels or order",
+        "specific root Back-button rule",
+        "specific header shape or height",
+        "specific control placement",
+        "specific gesture implementation",
+        "specific route grouping",
+        "frozen card composition",
+        "non-canonical frozen copy",
+        "exact frozen navigation structure"
+      ],
+      "replacement_test_required_for_retired_implementation_assertion": true
+    }
   },
   "identity": {
     "universal_identity": "Explorer",
@@ -61,6 +123,8 @@
     ]
   },
   "primary_navigation_observation": {
+    "role": "historical_current_implementation_evidence_only",
+    "freely_replaceable": true,
     "tabs": [
       {"key": "feed", "label": "News Feed", "route": "/feed", "requires_account": true},
       {"key": "messages", "label": "Messages", "route": "/messages", "requires_account": true},
@@ -68,10 +132,21 @@
       {"key": "score", "label": "Leaderboard", "route": "/leaderboards", "requires_account": true},
       {"key": "profile", "label": "Profile", "route": "/profile", "requires_account": true}
     ],
-    "map_centre_action": {"label": "Camera", "route": "/camera"},
-    "map_centre_upward_action": {"label": "Discover", "route": "/discover"},
+    "map_centre_action": {"label": "Camera", "route": "/camera", "implementation_locked": false},
+    "map_centre_upward_action": {"label": "Discover", "route": "/discover", "implementation_locked": false},
+    "root_back_presentation_locked": false,
     "generic_create_route_exists": false,
     "design_locked": false
+  },
+  "navigation_outcomes": {
+    "capture_must_be_reachable": true,
+    "discover_must_be_reachable": true,
+    "major_product_areas_must_be_findable": true,
+    "android_back_and_child_navigation_must_be_coherent": true,
+    "safety_critical_actions_may_not_be_gesture_only": true,
+    "specific_gesture_required": false,
+    "specific_tab_architecture_required": false,
+    "specific_header_architecture_required": false
   },
   "routes": [
     "/", "/settings", "/legal/privacy", "/legal/terms", "/map", "/messages", "/messages/[id]", "/discover", "/scan", "/camera", "/qr/[code]", "/profile", "/profile/[id]", "/profile/edit", "/explorers", "/connections/[id]", "/feed", "/moments/create", "/moments/[id]", "/memories/create", "/memories/[id]", "/social-comments/[id]", "/leaderboards", "/notifications",
@@ -85,12 +160,19 @@
     "/events", "/events/[id]", "/events/add", "/events/edit/[id]", "/events/review/[id]",
     "/admin/claims", "/admin/activities", "/admin/areas", "/admin/audit", "/admin/dashboard", "/admin/explorers", "/admin/listings", "/admin/moderation", "/admin/public-places"
   ],
+  "route_policy": {
+    "all_material_capabilities_must_survive": true,
+    "one_screen_per_route_required": false,
+    "current_route_grouping_required": false,
+    "designer_may_combine_regroup_or_nest": true
+  },
   "creation_invariants": {
     "moment_starts_at_camera": true,
     "memory_starts_at_camera": true,
     "display_surfaces_may_bypass_camera": false,
     "camera_preserves_place_preset": true,
-    "generic_create_hub_present": false
+    "generic_create_hub_present": false,
+    "camera_entry_ui_is_designer_owned": true
   },
   "presence": {
     "checkin_valid_target_families": ["park", "public_place"],
@@ -113,7 +195,8 @@
     "heat_min_contributions": 3,
     "heat_min_distinct_posters": 2,
     "heat_weights": {"review": 3, "memory": 2, "moment": 1},
-    "open_map_linkup_coordinates_are_approximate": true
+    "open_map_linkup_coordinates_are_approximate": true,
+    "visual_presentation_is_designer_owned": true
   },
   "messaging": {
     "one_hub": true,
@@ -121,7 +204,8 @@
     "direct_conversation_kinds": ["friend", "listing"],
     "manager_view_is_account_identity": false,
     "board_sources": ["linkup", "activity_club"],
-    "board_access_must_follow_underlying_policy": true
+    "board_access_must_follow_underlying_policy": true,
+    "current_view_tabs_are_required_ui": false
   },
   "entities": {
     "explorer_profile": {"relations": ["follows", "close_friends", "favourites", "notifications", "blocks", "safety_reports", "manager_capabilities", "content", "reviews"]},
@@ -142,7 +226,7 @@
   ],
   "permission_invariants": [
     "RLS/database logic is authoritative; hiding UI is not security",
-    "client permission questions go through utils/permissions.js",
+    "client permission questions go through utils/permissions.js unless a redesign preserves the same single trusted decision layer by an explicitly validated replacement",
     "account_type is not a client permission decision",
     "admin capability is not implied by Manager capability",
     "private Link-up meeting details are not visible to non-attendees",
@@ -165,9 +249,18 @@
     "future local-services marketplace",
     "unproven AI recommendation capability"
   ],
-  "verification_commands": [
+  "verification_layers": [
+    "Capability Truth Gate",
+    "Outcome Journey Gate",
+    "Runtime Gate",
+    "Design Quality Gate"
+  ],
+  "legacy_verification_commands": [
     "npm test", "npm run test:ci", "npm run verify:social", "npm run verify:live", "npm run verify:screens", "npm run verify:taxonomy", "npm run verify:markers", "npm run verify:place", "npm run verify:cards", "npm run verify:discover", "npm run verify:reputation", "npm run verify:places", "npm run verify:memories", "npm run verify:mymap", "npm run verify:livingmap", "npm run verify:browser", "npm run verify:trending", "npm run verify:score", "npm run verify:manager", "npm run verify:listings", "npm run verify:permissions", "npm run verify:friends", "npm run verify:contrast", "npm run verify:nativemap", "npm run verify:audience", "npm run verify:camera", "npm run verify:audit"
   ],
+  "legacy_gate_rule": "legacy tests are diagnostic evidence until classified; implementation-specific assertions must be replaced by outcome-level tests rather than forcing the old UI back",
+  "pre_v2_candidates": ["katie-dill", "alex-schleifer"],
+  "pre_v2_review_required_before_final_apples_to_apples_judging": true,
   "evidence": {
     "app/_layout.js": "74c9ac7fcc098cb202123e0994d170fd91a63f50",
     "utils/navigation.js": "f0761222870bd2a8c8386ae5acbffb5fc08cfc75",
