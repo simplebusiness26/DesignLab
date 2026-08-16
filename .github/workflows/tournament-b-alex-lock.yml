@@ -1,0 +1,67 @@
+name: Tournament B Alex Lock
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - designlab-2.0
+    paths:
+      - '.github/workflows/tournament-b-alex-lock.yml'
+      - 'knowledge/tournaments/challengers/2026-08-15-xplorer/candidates/alex-schleifer/**'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tournament-b-alex-lock
+  cancel-in-progress: false
+
+jobs:
+  prepare-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: designlab-2.0
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Validate frozen Tournament B inputs
+        run: node bin/designlab.js challenger validate
+      - name: Confirm Katie is locked and Alex is next
+        shell: bash
+        run: |
+          set -euo pipefail
+          node bin/designlab.js challenger verify katie-dill
+          node bin/designlab.js challenger status
+      - name: Materialise Alex run packet
+        run: node bin/designlab.js challenger prepare alex-schleifer --write
+      - name: Commit exact run packet when changed
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "DesignLab CI"
+          git config user.email "ci@designlab.local"
+          git add knowledge/tournaments/challengers/2026-08-15-xplorer/candidates/alex-schleifer/RUN_PACKET.md knowledge/tournaments/challengers/2026-08-15-xplorer/candidates/alex-schleifer/RUN_PACKET.json
+          if git diff --cached --quiet; then
+            echo "Alex run packet already exact."
+          else
+            git commit -m "Materialise Alex Tournament B run packet"
+            git push origin HEAD:designlab-2.0
+          fi
+      - name: Verify Alex when submission artifacts exist
+        shell: bash
+        run: |
+          set -euo pipefail
+          dir=knowledge/tournaments/challengers/2026-08-15-xplorer/candidates/alex-schleifer
+          if [ -f "$dir/RESULT.json" ]; then
+            node bin/designlab.js challenger verify alex-schleifer
+            node bin/designlab.js challenger status
+          else
+            echo "Alex output artifacts not written yet; packet preparation only."
+          fi
